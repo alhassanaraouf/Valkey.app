@@ -19,18 +19,19 @@ struct StatusMenu: View {
         settingsItem
         CheckForUpdatesButton()
         Divider()
-        Button("Quit Valkey.app") { AppDelegate.quitCompletely() }.keyboardShortcut("q")
+        // No ⌘Q hint: ⌘Q only closes to the menu bar, while this really quits.
+        Button("Quit Valkey.app") { AppDelegate.quitCompletely() }
     }
 
+    /// No ⌘, hint here: shortcuts only work in the app's own menu, not while this menu is open.
     @ViewBuilder private var settingsItem: some View {
         if #available(macOS 14, *) {
-            SettingsLink { Text("Settings…") }.keyboardShortcut(",")
+            SettingsLink { Text("Settings…") }
         } else {
             Button("Settings…") {
                 NSApp.activate(ignoringOtherApps: true)
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
-            .keyboardShortcut(",")
         }
     }
 }

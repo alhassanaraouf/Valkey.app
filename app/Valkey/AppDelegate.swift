@@ -32,6 +32,7 @@ struct ValkeyApp: App {
         .defaultSize(width: 900, height: 600)
         .commands {
             CommandGroup(after: .appInfo) { CheckForUpdatesButton() }
+            CommandGroup(after: .appTermination) { QuitCompletelyButton() }
         }
 
         Settings {
@@ -42,6 +43,18 @@ struct ValkeyApp: App {
             StatusMenu().environmentObject(store)
         } label: {
             Image("ValkeySymbol")
+        }
+    }
+}
+
+/// ⌘Q only closes to the menu bar while the menu-bar icon is shown, so offer a real quit next to it.
+/// Without the icon ⌘Q already quits, so there's nothing to add.
+private struct QuitCompletelyButton: View {
+    @AppStorage(SettingsKey.showMenuBarExtra) private var showMenuBarExtra = true
+
+    var body: some View {
+        if showMenuBarExtra {
+            Button("Quit Completely") { AppDelegate.quitCompletely() }
         }
     }
 }
