@@ -8,6 +8,14 @@
       "size" : 3491531,
       "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/valkey-9.1.2/valkey-9.1.2-macos-universal.tar.gz",
       "version" : "9.1.2"
+    },
+    {
+      "minimumMacOS" : "13.0",
+      "published" : "2026-09-25",
+      "sha256" : "02c54b157e3bb3c5eac8958b95c6662f28d9cfcc92874c6e423f57b7f8235e79",
+      "size" : 2607032,
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/valkey-9.0.6/valkey-9.0.6-macos-universal.tar.gz",
+      "version" : "9.0.6"
     }
   ]
 }
