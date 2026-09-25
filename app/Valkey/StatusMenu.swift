@@ -12,8 +12,8 @@ struct StatusMenu: View {
         }
         Divider()
         Button("Open Valkey…") {
+            bringAppForward()
             openWindow(id: "main")
-            NSApp.activate(ignoringOtherApps: true)
         }
         .onAppear { MainWindow.open = { openWindow(id: "main") } }
         settingsItem
@@ -26,12 +26,32 @@ struct StatusMenu: View {
     /// No ⌘, hint here: shortcuts only work in the app's own menu, not while this menu is open.
     @ViewBuilder private var settingsItem: some View {
         if #available(macOS 14, *) {
-            SettingsLink { Text("Settings…") }
+            OpenSettingsButton()
         } else {
             Button("Settings…") {
-                NSApp.activate(ignoringOtherApps: true)
+                bringAppForward()
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
+        }
+    }
+}
+
+/// With no window open the app is menu-bar only and inactive, so a window opened from this menu
+/// would stay hidden behind other apps. Join the Dock and activate first.
+private func bringAppForward() {
+    NSApp.setActivationPolicy(.regular)
+    NSApp.activate(ignoringOtherApps: true)
+}
+
+/// SettingsLink can't activate the app first, so open Settings programmatically instead.
+@available(macOS 14, *)
+private struct OpenSettingsButton: View {
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Button("Settings…") {
+            bringAppForward()
+            openSettings()
         }
     }
 }
