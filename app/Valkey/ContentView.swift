@@ -8,7 +8,9 @@ struct SheetRequest: Identifiable {
 
 struct ContentView: View {
     @EnvironmentObject var store: ServerStore
+    @EnvironmentObject var versions: VersionStore
     @State private var selection: UUID?
+    @State private var showingVersions = false
     @State private var sheet: SheetRequest?
     @State private var removing: ValkeyServer?
     @State private var columns = NavigationSplitViewVisibility.all
@@ -27,6 +29,7 @@ struct ContentView: View {
                         Image(systemName: "minus")
                     }.help("Remove server").disabled(selection == nil)
                     Spacer()
+                    Button("Versions…") { showingVersions = true }.help("Install or remove Valkey versions")
                 }
                 .buttonStyle(.borderless).padding(10)
             }
@@ -36,9 +39,14 @@ struct ContentView: View {
                 ServerDetailView(server: server) {
                     sheet = SheetRequest(config: server.config, isNew: false)
                 }
+            } else if store.servers.isEmpty {
+                VStack(spacing: 12) {
+                    Text("No servers yet").font(.title2)
+                    Button("Create Server…") { sheet = SheetRequest(config: store.newConfig(), isNew: true) }
+                        .controlSize(.large)
+                }
             } else {
-                Text(store.servers.isEmpty ? "No servers. Click + to add one." : "Select a server.")
-                    .foregroundColor(.secondary)
+                Text("Select a server.").foregroundColor(.secondary)
             }
         }
         .frame(minWidth: 760, minHeight: 480)
@@ -52,6 +60,11 @@ struct ContentView: View {
                     store.server(id: config.id)?.config = config
                 }
             }
+            .environmentObject(store)
+            .environmentObject(versions)
+        }
+        .sheet(isPresented: $showingVersions) {
+            VersionsView().environmentObject(store).environmentObject(versions)
         }
         .alert("Remove “\(removing?.config.name ?? "")”?", isPresented: Binding(
             get: { removing != nil }, set: { if !$0 { removing = nil } }

@@ -26,8 +26,9 @@ Package.resolved
 .LSOverride
 
 # Valkey build artifacts
-valkey-src/build/
-valkey-src/valkey-*.tar.gz
+registry/valkey-src/build/
+registry/valkey-src/valkey-*.tar.gz
 
 # Logs
 *.log
+registry/dist/

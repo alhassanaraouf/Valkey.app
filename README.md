@@ -3,7 +3,18 @@
 macOS menu-bar app for [Valkey](https://valkey.io) — the open-source Redis replacement.
 
 Mimics [Postgres.app](https://postgresapp.com): run several Valkey servers side by side, each on its
-own port, version and data directory, with its own live log. Everything is bundled — nothing else to install.
+own port, version and data directory, with its own live log. Valkey versions are installed from a signed
+registry, so new Valkey releases don't need a new app release.
+
+## Repository layout
+
+| Path | What |
+|------|------|
+| `app/` | macOS app (Xcode project, SwiftUI sources, DMG script) |
+| `registry/` | `registry.json` + signature, and tooling to build, package, sign and check Valkey versions |
+| `website/` | valkey.app static site |
+| `Artwork/` | logo and app icon sources |
+| `.github/workflows/` | publish a Valkey version; deploy the website |
 
 ## Requirements
 
@@ -14,44 +25,93 @@ own port, version and data directory, with its own live log. Everything is bundl
 
 Download `Valkey.app.zip` from Releases, drag to `/Applications`, launch.
 
-Bundled versions (plain core, no modules, no TLS, universal binaries): Valkey 8.0, 8.1, 9.0, 9.1.
-
 ## Usage
 
-- **Window** — sidebar lists servers (status, port, version); **+** / **−** add and remove servers.
-  The detail pane has **Server Settings…**, **Connect…** (opens `valkey-cli` in Terminal), **Show in Finder**,
-  **Start** / **Stop**, and the server's log.
+- **Window** — sidebar lists servers (status, port, version); **+** / **−** add and remove servers,
+  **Versions…** installs or removes Valkey versions. The detail pane has **Server Settings…**,
+  **Connect…** (opens `valkey-cli` in Terminal), **Show in Finder**, **Start** / **Stop**, and the server's log.
+- **New server** — pick any available version; it's downloaded on **Create Server** if not installed yet.
+- **Server settings** — name, port and start-automatically can change any time (a running server restarts).
+  The version can only move up to a newer installed version; older versions may not read newer data files.
 - **Menu bar** — each server with Start/Stop, Connect and Show Data Directory; **Open at Login**.
-- Server settings: name, port (changing it restarts a running server), start automatically when the app opens.
-  Version and data directory are chosen when the server is created.
 - Removing a server stops it but keeps its data directory. Quitting the app stops all servers gracefully.
 
-Each server's data directory (default `~/Library/Application Support/Valkey/var-<port>/`) holds its
-`valkey.conf` (created from `docs/valkey.conf.default`), data files and `valkey.log`.
+Files, all under `~/Library/Application Support/Valkey/`:
+
+- `Versions/<version>/bin/` — installed `valkey-server` / `valkey-cli`
+- `var-<port>/` (default per server) — `valkey.conf` (from `app/Valkey/valkey.conf.default`), data files, `valkey.log`
+
+## Version registry
+
+The app reads `https://valkey.app/registry.json` plus `registry.json.sig`, kept in [`registry/`](registry/)
+and deployed with the website.
+
+```json
+{
+  "schemaVersion" : 1,
+  "versions" : [
+    {
+      "version" : "9.1.2",
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/valkey-9.1.2/valkey-9.1.2-macos-universal.tar.gz",
+      "sha256" : "…",
+      "size" : 3471939,
+      "minimumMacOS" : "13.0",
+      "published" : "2026-09-25"
+    }
+  ]
+}
+```
+
+- `registry.json.sig` is an Ed25519 signature over the exact bytes of `registry.json`. The app only
+  trusts the registry if it verifies against the public key in `app/Valkey/VersionStore.swift`, and only
+  installs a download whose size and SHA-256 match its entry. Versions needing a newer macOS are hidden.
+- Each package is a `.tar.gz` with `bin/valkey-server`, `bin/valkey-cli` (universal, signed) and Valkey's `COPYING`.
+- To test against another registry: `defaults write app.valkey.Valkey registryURL http://127.0.0.1:8000/registry.json`.
+
+### Publishing a Valkey version
+
+Run the **Publish Valkey version** workflow (Actions → Run workflow) with e.g. `9.1.3`. It:
+
+1. builds arm64 + x86_64 from source verified against [valkey-io/valkey-hashes](https://github.com/valkey-io/valkey-hashes)
+   (`registry/scripts/package-valkey.sh`),
+2. uploads the package to the GitHub release `valkey-<version>`,
+3. adds it to `registry/registry.json`, signs it, verifies the signature and commits both files,
+4. redeploys the website so the new version is live.
+
+It needs the repository secret `VALKEY_REGISTRY_PRIVATE_KEY` (contents of the private key file).
+
+Locally, the same steps are:
+
+```bash
+registry/scripts/package-valkey.sh 9.1.3
+swift registry/scripts/registry.swift add registry/registry.json 9.1.3 <release-asset-url> registry/dist/valkey-9.1.3-macos-universal.tar.gz
+VALKEY_REGISTRY_PRIVATE_KEY=$(cat ~/.config/valkey-app/registry-signing-key) swift registry/scripts/registry.swift sign registry/registry.json
+```
+
+**Signing key.** Generated with `swift registry/scripts/registry.swift keygen <file>`, which writes the private key
+to `<file>` (mode 600) and prints the public key for `VersionStore.releaseKey`. Keep the private key out of
+the repo; anyone holding it can publish binaries the app will install. If it leaks, generate a new pair,
+update `releaseKey`, re-sign the registry and ship an app update.
+
+## Website
+
+[`website/`](website/) is the static site for valkey.app (plain HTML, no build step). The **Deploy website**
+workflow publishes it to GitHub Pages together with the registry files whenever either changes.
+One-time setup: repo Settings → Pages → Source **GitHub Actions**, custom domain `valkey.app`.
+
+Preview locally: `python3 -m http.server -d website` (copy `registry/registry.json` in to see the version list).
 
 ## Development
 
-Needs Xcode (command line tools + `make`/`curl`). No Homebrew or system Valkey needed.
+Needs Xcode. Valkey isn't bundled, so app builds are quick.
 
 ```bash
-open Valkey.xcodeproj   # then Run (⌘R)
+open app/Valkey.xcodeproj   # then Run (⌘R)
+
+xcodebuild -project app/Valkey.xcodeproj -scheme Valkey -configuration Debug -derivedDataPath app/build/DerivedData build
+app/scripts/create-dmg.sh              # universal Release build → app/build/Valkey.app.zip + Valkey.dmg
+registry/scripts/check-registry.sh     # end-to-end check: signing, install, tampered registry, corrupted download
 ```
-
-The **Embed Valkey** build phase (`buildscripts/embed-valkey.sh`) downloads the pinned
-source of each version (SHA-256 verified), builds it for each target arch via `valkey-src/Makefile`,
-and embeds `valkey-server` / `valkey-cli` in `Valkey.app/Contents/Versions/<major.minor>/bin`.
-The first build takes a few minutes; later builds reuse `valkey-src/build/`.
-
-Command line:
-
-```bash
-xcodebuild -project Valkey.xcodeproj -scheme Valkey -configuration Debug -derivedDataPath build/DerivedData build
-open build/DerivedData/Build/Products/Debug/Valkey.app
-
-./scripts/create-dmg.sh   # universal Release build → build/Valkey.app.zip + build/Valkey.dmg
-```
-
-To add or bump a version, edit `VERSIONS` and its `SHA256_<version>` line in `valkey-src/Makefile`.
 
 ## License
 

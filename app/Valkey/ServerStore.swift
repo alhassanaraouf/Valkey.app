@@ -1,6 +1,7 @@
 import Foundation
 
 /// The list of servers, persisted in UserDefaults.
+@MainActor
 final class ServerStore: ObservableObject {
     static let shared = ServerStore()
 
@@ -10,8 +11,7 @@ final class ServerStore: ObservableObject {
     private init() {
         let saved = UserDefaults.standard.data(forKey: defaultsKey)
             .flatMap { try? JSONDecoder().decode([ValkeyServer.Config].self, from: $0) }
-        servers = (saved ?? [newConfig()]).map(makeServer)
-        if saved == nil { save() }
+        servers = (saved ?? []).map(makeServer)
     }
 
     private func makeServer(_ config: ValkeyServer.Config) -> ValkeyServer {
@@ -29,9 +29,9 @@ final class ServerStore: ObservableObject {
         servers.first { $0.id == id }
     }
 
-    /// A new config on the newest bundled version and the first free port from 6379.
+    /// A new config on the newest known version and the first free port from 6379.
     func newConfig() -> ValkeyServer.Config {
-        let version = ValkeyServer.availableVersions.first ?? ""
+        let version = VersionStore.shared.allVersions.first ?? ""
         let usedPorts = Set(servers.map(\.config.port))
         let port = (6379...65535).first { !usedPorts.contains($0) } ?? 6379
         return .init(name: "Valkey \(version)", version: version, port: port,

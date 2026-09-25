@@ -1,0 +1,47 @@
+# Publishes valkey.app on GitHub Pages: website/ plus registry/registry.json(.sig) at the site root.
+# Repo settings: Pages → Source "GitHub Actions", custom domain valkey.app.
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - website/**
+      - registry/registry.json
+      - registry/registry.json.sig
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Always main: when called right after a registry commit, the triggering SHA predates it.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Assemble site
+        run: |
+          mkdir _site
+          cp -R website/. _site/
+          cp registry/registry.json registry/registry.json.sig _site/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

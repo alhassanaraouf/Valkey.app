@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
-# Creates build/Valkey.app.zip and build/Valkey.dmg from the Release build.
-# Usage: ./scripts/create-dmg.sh  [builds Release, zips, and makes dmg]
+cd "$(dirname "$0")/.."   # app/
+# Creates app/build/Valkey.app.zip and app/build/Valkey.dmg from the Release build.
+# Usage: app/scripts/create-dmg.sh
 DMG="build/Valkey.dmg"
 ZIP="build/Valkey.app.zip"
 
-echo "→ Building Release (universal, builds bundled Valkey from source)..."
+echo "→ Building Release (universal)..."
 xcodebuild -project Valkey.xcodeproj -configuration Release -scheme Valkey \
   -derivedDataPath build/DerivedData ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO build 2>&1 | tail -20
 
@@ -14,7 +15,6 @@ echo "→ App at: $APP"
 [ -d "$APP" ] || { echo "Valkey.app not found"; exit 1; }
 # Xcode signs the app and the embedded valkey binaries; just verify.
 codesign --verify --deep --strict --verbose=2 "$APP"
-for v in "$APP"/Contents/Versions/*; do echo "  $(basename "$v"): $(lipo -archs "$v/bin/valkey-server")"; done
 
 echo "→ Creating zip..."
 rm -f "$ZIP"

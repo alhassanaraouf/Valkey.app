@@ -5,11 +5,12 @@ import SwiftUI
 struct ValkeyApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @ObservedObject private var store = ServerStore.shared
+    @ObservedObject private var versions = VersionStore.shared
 
     var body: some Scene {
         // SwiftUI owns the window so the split view's toolbar and safe areas lay out correctly.
         Window("Valkey", id: "main") {
-            ContentView().environmentObject(store)
+            ContentView().environmentObject(store).environmentObject(versions)
         }
         .defaultSize(width: 900, height: 600)
 
@@ -24,6 +25,7 @@ struct ValkeyApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         ServerStore.shared.servers.filter(\.config.startAutomatically).forEach { $0.start() }
+        Task { await VersionStore.shared.refresh() }
         // Menu-bar (LSUIElement) apps aren't activated automatically, so bring the window forward.
         NSApp.activate(ignoringOtherApps: true)
     }

@@ -1,28 +1,23 @@
 import AppKit
 
 /// One Valkey server: its saved configuration plus the running process and its log.
+@MainActor
 final class ValkeyServer: ObservableObject, Identifiable {
     struct Config: Codable, Equatable {
         var id = UUID()
         var name: String
-        var version: String          // major.minor, a folder in Contents/Versions
+        var version: String          // an installed version, see VersionStore
         var port: Int
         var dataDirectory: String
         var startAutomatically = false
     }
 
-    static let rootDir = FileManager.default.homeDirectoryForCurrentUser
+    nonisolated static let rootDir = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/Valkey", isDirectory: true)
-    private static let versionsDir = Bundle.main.bundleURL.appendingPathComponent("Contents/Versions", isDirectory: true)
-
-    /// Bundled versions, newest first.
-    static let availableVersions: [String] = ((try? FileManager.default.contentsOfDirectory(atPath: versionsDir.path)) ?? [])
-        .sorted { $0.compare($1, options: .numeric) == .orderedDescending }
-
     @Published var config: Config {
         didSet {
             onConfigChange?()
-            if isRunning && config.port != oldValue.port { restart() }
+            if isRunning && (config.port != oldValue.port || config.version != oldValue.version) { restart() }
         }
     }
     /// True while the process is alive (including while it shuts down).
@@ -36,16 +31,17 @@ final class ValkeyServer: ObservableObject, Identifiable {
     private var restartPending = false
     private var onStopped: [() -> Void] = []
 
-    var id: UUID { config.id }
+    nonisolated let id: UUID
     var dataDir: URL { URL(fileURLWithPath: config.dataDirectory, isDirectory: true) }
     var logURL: URL { dataDir.appendingPathComponent("valkey.log") }
     private var confURL: URL { dataDir.appendingPathComponent("valkey.conf") }
     private var pidURL: URL { dataDir.appendingPathComponent("valkey.pid") }
     private func binary(_ name: String) -> URL {
-        Self.versionsDir.appendingPathComponent("\(config.version)/bin/\(name)")
+        VersionStore.shared.binary(name, version: config.version)
     }
 
     init(config: Config) {
+        id = config.id
         self.config = config
         loadLogTail()
         stopOrphanedServer()
@@ -89,7 +85,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
         failure = nil
         let server = binary("valkey-server")
         guard FileManager.default.isExecutableFile(atPath: server.path) else {
-            failure = "Valkey \(config.version) is not bundled with this app."
+            failure = "Valkey \(config.version) isn't installed. Install it from Versions…, or choose another version in Server Settings."
             return
         }
         ensureDataDir()
