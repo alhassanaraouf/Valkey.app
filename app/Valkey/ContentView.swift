@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var sheet: SheetRequest?
     @State private var removing: ValkeyServer?
     @State private var columns = NavigationSplitViewVisibility.all
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -50,7 +51,10 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 760, minHeight: 480)
-        .onAppear { selection = selection ?? store.servers.first?.id }
+        .onAppear {
+            selection = selection ?? store.servers.first?.id
+            MainWindow.open = { openWindow(id: "main") }
+        }
         .sheet(item: $sheet) { request in
             ServerSettingsView(request: request) { config in
                 if request.isNew {

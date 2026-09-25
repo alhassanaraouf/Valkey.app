@@ -1,11 +1,9 @@
 import SwiftUI
-import ServiceManagement
 
 /// Contents of the menu-bar menu: each server with its own actions, then app-level items.
 struct StatusMenu: View {
     @EnvironmentObject var store: ServerStore
     @Environment(\.openWindow) private var openWindow
-    @State private var openAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         ForEach(store.servers) { ServerMenu(server: $0) }
@@ -17,21 +15,22 @@ struct StatusMenu: View {
             openWindow(id: "main")
             NSApp.activate(ignoringOtherApps: true)
         }
-        Toggle("Open at Login", isOn: Binding(get: { openAtLogin }, set: setOpenAtLogin))
+        .onAppear { MainWindow.open = { openWindow(id: "main") } }
+        settingsItem
         Divider()
         Button("Quit Valkey.app") { NSApp.terminate(nil) }.keyboardShortcut("q")
     }
 
-    private func setOpenAtLogin(_ enabled: Bool) {
-        let service = SMAppService.mainApp
-        do {
-            if enabled { try service.register() } else { try service.unregister() }
-            if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-        } catch {
-            NSApp.activate(ignoringOtherApps: true)
-            NSAlert(error: error).runModal()
+    @ViewBuilder private var settingsItem: some View {
+        if #available(macOS 14, *) {
+            SettingsLink { Text("Settings…") }.keyboardShortcut(",")
+        } else {
+            Button("Settings…") {
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            }
+            .keyboardShortcut(",")
         }
-        openAtLogin = service.status == .enabled
     }
 }
 

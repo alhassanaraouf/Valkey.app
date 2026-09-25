@@ -33,7 +33,11 @@ Download `Valkey.app.zip` from Releases, drag to `/Applications`, launch.
 - **New server** — pick any available version; it's downloaded on **Create Server** if not installed yet.
 - **Server settings** — name, port and start-automatically can change any time (a running server restarts).
   The version can only move up to a newer installed version; older versions may not read newer data files.
-- **Menu bar** — each server with Start/Stop, Connect and Show Data Directory; **Open at Login**.
+- **Menu bar** — each server with Start/Stop, Connect and Show Data Directory; **Settings…**.
+- **Dock** — the app is in the Dock while one of its windows is open and hides to the menu bar when
+  they're all closed (it stays in the Dock if the menu-bar icon is turned off).
+- **Settings** (⌘,) — show in menu bar, open at login, and the terminal used by **Connect…**
+  (any installed app that runs `.command` scripts: Terminal, iTerm2, Ghostty, …).
 - Removing a server stops it but keeps its data directory. Quitting the app stops all servers gracefully.
 
 Files, all under `~/Library/Application Support/Valkey/`:

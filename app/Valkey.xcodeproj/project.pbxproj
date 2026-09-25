@@ -17,6 +17,7 @@
 		AA000008 /* ServerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000018 /* ServerStore.swift */; };
 		AA000009 /* VersionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000019 /* VersionStore.swift */; };
 		AA00000A /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001A /* VersionsView.swift */; };
+		AA00000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001B /* SettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 		AA000018 /* ServerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerStore.swift; sourceTree = "<group>"; };
 		AA000019 /* VersionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionStore.swift; sourceTree = "<group>"; };
 		AA00001A /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
+		AA00001B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -51,6 +53,7 @@
 				AA000018 /* ServerStore.swift */,
 				AA000019 /* VersionStore.swift */,
 				AA00001A /* VersionsView.swift */,
+				AA00001B /* SettingsView.swift */,
 				AA000013 /* StatusMenu.swift */,
 				AA000014 /* ServerSettingsView.swift */,
 				AA000016 /* ContentView.swift */,
@@ -144,6 +147,7 @@
 				AA000008 /* ServerStore.swift in Sources */,
 				AA000009 /* VersionStore.swift in Sources */,
 				AA00000A /* VersionsView.swift in Sources */,
+				AA00000B /* SettingsView.swift in Sources */,
 				AA000003 /* StatusMenu.swift in Sources */,
 				AA000004 /* ServerSettingsView.swift in Sources */,
 				AA000006 /* ContentView.swift in Sources */,

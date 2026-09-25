@@ -161,12 +161,12 @@ final class ValkeyServer: ObservableObject, Identifiable {
     }
 
     func openCLI() {
-        // A .command file opens in Terminal without needing Apple Events permission.
+        // A .command file runs in any terminal app without needing Apple Events permission.
         let script = dataDir.appendingPathComponent("valkey-cli.command")
         let quoted = "'" + binary("valkey-cli").path.replacingOccurrences(of: "'", with: "'\\''") + "'"
         try? "#!/bin/sh\nexec \(quoted) -p \(config.port)\n".write(to: script, atomically: true, encoding: .utf8)
         try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
-        NSWorkspace.shared.open(script)
+        TerminalApps.open(script)
     }
 
     func showDataDir() {
