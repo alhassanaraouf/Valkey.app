@@ -1,0 +1,234 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000011 /* AppDelegate.swift */; };
+		AA000002 /* ValkeyServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000012 /* ValkeyServer.swift */; };
+		AA000003 /* StatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000013 /* StatusMenu.swift */; };
+		AA000004 /* ServerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000014 /* ServerSettingsView.swift */; };
+		AA000006 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000016 /* ContentView.swift */; };
+		BB000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA000025 /* Assets.xcassets */; };
+		BB000002 /* valkey.conf.default in Resources */ = {isa = PBXBuildFile; fileRef = AA000026 /* valkey.conf.default */; };
+		AA000008 /* ServerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000018 /* ServerStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA000011 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AA000012 /* ValkeyServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValkeyServer.swift; sourceTree = "<group>"; };
+		AA000013 /* StatusMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenu.swift; sourceTree = "<group>"; };
+		AA000014 /* ServerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSettingsView.swift; sourceTree = "<group>"; };
+		AA000016 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AA000020 /* Valkey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Valkey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA000025 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA000026 /* valkey.conf.default */ = {isa = PBXFileReference; lastKnownFileType = text; name = valkey.conf.default; path = docs/valkey.conf.default; sourceTree = SOURCE_ROOT; };
+		AA000018 /* ServerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerStore.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		AA000030 = {
+			isa = PBXGroup;
+			children = (
+				AA000031 /* Valkey */,
+				AA000032 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA000031 /* Valkey */ = {
+			isa = PBXGroup;
+			children = (
+				AA000011 /* AppDelegate.swift */,
+				AA000012 /* ValkeyServer.swift */,
+				AA000018 /* ServerStore.swift */,
+				AA000013 /* StatusMenu.swift */,
+				AA000014 /* ServerSettingsView.swift */,
+				AA000016 /* ContentView.swift */,
+				AA000025 /* Assets.xcassets */,
+				AA000021 /* Info.plist */,
+				AA000026 /* valkey.conf.default */,
+			);
+			path = Valkey;
+			sourceTree = "<group>";
+		};
+		AA000032 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA000020 /* Valkey.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA000040 /* Valkey */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000060 /* Build configuration list for PBXNativeTarget "Valkey" */;
+			buildPhases = (
+				AA000050 /* Sources */,
+				AA000051 /* Frameworks */,
+				AA000052 /* Resources */,
+				AA000053 /* Embed Valkey */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Valkey;
+			productName = Valkey;
+			productReference = AA000020 /* Valkey.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA000070 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1420;
+				LastUpgradeCheck = 1420;
+				TargetAttributes = {
+					AA000040 /* Valkey */ = {
+						CreatedOnToolsVersion = 14.2;
+					};
+				};
+			};
+			buildConfigurationList = AA000061 /* Build configuration list for PBXProject */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA000030;
+			productRefGroup = AA000032 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA000040 /* Valkey */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB000001 /* Assets.xcassets in Resources */,
+				BB000002 /* valkey.conf.default in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AA000053 /* Embed Valkey */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/valkey-src/Makefile",
+				"$(SRCROOT)/buildscripts/embed-valkey.sh",
+			);
+			name = "Embed Valkey";
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Versions",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/buildscripts/embed-valkey.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* AppDelegate.swift in Sources */,
+				AA000002 /* ValkeyServer.swift in Sources */,
+				AA000008 /* ServerStore.swift in Sources */,
+				AA000003 /* StatusMenu.swift in Sources */,
+				AA000004 /* ServerSettingsView.swift in Sources */,
+				AA000006 /* ContentView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+		AA000051 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+
+/* Begin XCBuildConfiguration section */
+		AA000080 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Valkey/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				CODE_SIGN_ENTITLEMENTS = Valkey/Valkey.entitlements;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.valkey.Valkey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA000081 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = Valkey/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				CODE_SIGN_ENTITLEMENTS = Valkey/Valkey.entitlements;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.valkey.Valkey;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		AA000082 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)";}; name = Debug; };
+		AA000083 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)";}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA000060 /* Build configuration list for PBXNativeTarget "Valkey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000080 /* Debug */,
+				AA000081 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA000061 /* Build configuration list for PBXProject "Valkey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000082 /* Debug */,
+				AA000083 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA000070 /* Project object */;
+}

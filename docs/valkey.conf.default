@@ -1,0 +1,11 @@
+# Valkey default config for Valkey.app.
+# Copied to ~/Library/Application Support/Valkey/valkey.conf on first launch.
+# Valkey.app always sets port, dir, pidfile and logfile on the command line,
+# which overrides anything set here. Change the port in Preferences.
+bind 127.0.0.1 -::1
+protected-mode yes
+dbfilename dump.rdb
+appendonly yes
+appendfilename appendonly.aof
+save 900 1
+save 300 10
