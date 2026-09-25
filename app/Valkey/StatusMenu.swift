@@ -17,8 +17,9 @@ struct StatusMenu: View {
         }
         .onAppear { MainWindow.open = { openWindow(id: "main") } }
         settingsItem
+        CheckForUpdatesButton()
         Divider()
-        Button("Quit Valkey.app") { NSApp.terminate(nil) }.keyboardShortcut("q")
+        Button("Quit Valkey.app") { AppDelegate.quitCompletely() }.keyboardShortcut("q")
     }
 
     @ViewBuilder private var settingsItem: some View {

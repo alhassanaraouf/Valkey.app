@@ -1,0 +1,86 @@
+# Releases Valkey.app: builds the universal DMG + zip, publishes the GitHub release, adds the zip
+# (Ed25519-signed) to the Sparkle update feed website/appcast.xml, and redeploys valkey.app.
+# Before running: bump CFBundleShortVersionString/CFBundleVersion in app/Valkey/Info.plist and add
+# app/release-notes/<version>.md (Markdown; shown in the update window and on the release page).
+name: Release app
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: App version to release; must match CFBundleShortVersionString (e.g. 1.2)
+        required: true
+
+concurrency: appcast
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check version, build number and release notes
+        run: |
+          PLIST=app/Valkey/Info.plist
+          SHORT=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
+          BUILD=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$PLIST")
+          [ "$SHORT" = "$VERSION" ] || { echo "Info.plist is at $SHORT; bump it to $VERSION first"; exit 1; }
+          [ -f "app/release-notes/$VERSION.md" ] || { echo "Missing app/release-notes/$VERSION.md"; exit 1; }
+          ! gh release view "app-v$VERSION" >/dev/null 2>&1 || { echo "app-v$VERSION already exists"; exit 1; }
+          # Sparkle only offers builds newer than the installed one, so CFBundleVersion must increase.
+          LATEST=$(grep -o '<sparkle:version>[0-9]*' website/appcast.xml | grep -o '[0-9]*$' | sort -n | tail -1 || true)
+          [ "$BUILD" -gt "${LATEST:-0}" ] || { echo "CFBundleVersion $BUILD must be greater than $LATEST"; exit 1; }
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+
+      - name: Build DMG and zip
+        run: app/scripts/create-dmg.sh
+
+      - name: Publish GitHub release
+        run: |
+          {
+            cat "app/release-notes/$VERSION.md"
+            echo
+            echo "## Install"
+            echo
+            echo "Download **Valkey.dmg**, open it, and drag **Valkey.app** to Applications. Valkey.app 1.2 and later update themselves."
+            echo
+            echo "## Checksums (SHA-256)"
+            echo
+            echo '```'
+            (cd app/build && shasum -a 256 Valkey.dmg Valkey.app.zip)
+            echo '```'
+          } > release-body.md
+          gh release create "app-v$VERSION" app/build/Valkey.dmg app/build/Valkey.app.zip \
+            --title "Valkey.app $VERSION" --notes-file release-body.md --target "$GITHUB_SHA" --latest
+
+      - name: Add to update feed
+        env:
+          VALKEY_REGISTRY_PRIVATE_KEY: ${{ secrets.VALKEY_REGISTRY_PRIVATE_KEY }}
+        run: |
+          swift app/scripts/appcast.swift website/appcast.xml "$VERSION" "$BUILD" \
+            "https://github.com/$REPO/releases/download/app-v$VERSION/Valkey.app.zip" \
+            app/build/Valkey.app.zip "app/release-notes/$VERSION.md"
+
+      - name: Commit update feed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add website/appcast.xml
+          git commit -m "Update feed: Valkey.app $VERSION"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+  # Pushes made with GITHUB_TOKEN don't trigger other workflows, so deploy explicitly.
+  deploy:
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-website.yml

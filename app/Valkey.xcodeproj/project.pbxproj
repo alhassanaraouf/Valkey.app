@@ -18,6 +18,8 @@
 		AA000009 /* VersionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000019 /* VersionStore.swift */; };
 		AA00000A /* VersionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001A /* VersionsView.swift */; };
 		AA00000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001B /* SettingsView.swift */; };
+		CC000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC000003 /* Sparkle */; };
+		AA00000C /* Updater.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001C /* Updater.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +36,7 @@
 		AA000019 /* VersionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionStore.swift; sourceTree = "<group>"; };
 		AA00001A /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
 		AA00001B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AA00001C /* Updater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Updater.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -54,6 +57,7 @@
 				AA000019 /* VersionStore.swift */,
 				AA00001A /* VersionsView.swift */,
 				AA00001B /* SettingsView.swift */,
+				AA00001C /* Updater.swift */,
 				AA000013 /* StatusMenu.swift */,
 				AA000014 /* ServerSettingsView.swift */,
 				AA000016 /* ContentView.swift */,
@@ -88,6 +92,9 @@
 			dependencies = (
 			);
 			name = Valkey;
+			packageProductDependencies = (
+				CC000003 /* Sparkle */,
+			);
 			productName = Valkey;
 			productReference = AA000020 /* Valkey.app */;
 			productType = "com.apple.product-type.application";
@@ -116,6 +123,9 @@
 				Base,
 			);
 			mainGroup = AA000030;
+			packageReferences = (
+				CC000002 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = AA000032 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -148,6 +158,7 @@
 				AA000009 /* VersionStore.swift in Sources */,
 				AA00000A /* VersionsView.swift in Sources */,
 				AA00000B /* SettingsView.swift in Sources */,
+				AA00000C /* Updater.swift in Sources */,
 				AA000003 /* StatusMenu.swift in Sources */,
 				AA000004 /* ServerSettingsView.swift in Sources */,
 				AA000006 /* ContentView.swift in Sources */,
@@ -155,7 +166,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-		AA000051 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AA000051 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (CC000001 /* Sparkle in Frameworks */,); runOnlyForDeploymentPostprocessing = 0; };
 
 /* Begin XCBuildConfiguration section */
 		AA000080 /* Debug */ = {
@@ -197,6 +208,25 @@
 		AA000082 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)";}; name = Debug; };
 		AA000083 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)";}; name = Release; };
 /* End XCBuildConfiguration section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CC000002 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CC000003 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC000002 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		AA000060 /* Build configuration list for PBXNativeTarget "Valkey" */ = {

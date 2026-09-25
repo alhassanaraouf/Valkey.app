@@ -36,8 +36,12 @@ Download `Valkey.app.zip` from Releases, drag to `/Applications`, launch.
 - **Menu bar** — each server with Start/Stop, Connect and Show Data Directory; **Settings…**.
 - **Dock** — the app is in the Dock while one of its windows is open and hides to the menu bar when
   they're all closed (it stays in the Dock if the menu-bar icon is turned off).
+- **⌘Q** closes the windows and keeps Valkey (and your servers) running in the menu bar. To really quit,
+  use **Quit** in the menu-bar menu or the Dock icon's menu. Without the menu-bar icon, ⌘Q quits.
 - **Settings** (⌘,) — show in menu bar, open at login, and the terminal used by **Connect…**
-  (any installed app that runs `.command` scripts: Terminal, iTerm2, Ghostty, …).
+  (any installed app that runs `.command` scripts: Terminal, iTerm2, Ghostty, …). Ghostty 1.3+ is
+  driven through its AppleScript interface, which skips Ghostty's per-script "Allow" prompt; macOS asks
+  once for permission to control Ghostty.
 - Removing a server stops it but keeps its data directory. Quitting the app stops all servers gracefully.
 
 Files, all under `~/Library/Application Support/Valkey/`:
@@ -96,6 +100,28 @@ VALKEY_REGISTRY_PRIVATE_KEY=$(cat ~/.config/valkey-app/registry-signing-key) swi
 to `<file>` (mode 600) and prints the public key for `VersionStore.releaseKey`. Keep the private key out of
 the repo; anyone holding it can publish binaries the app will install. If it leaks, generate a new pair,
 update `releaseKey`, re-sign the registry and ship an app update.
+
+## App updates
+
+Valkey.app 1.2+ updates itself with [Sparkle](https://sparkle-project.org). It checks the feed
+`https://valkey.app/appcast.xml` ([`website/appcast.xml`](website/appcast.xml)) daily, or on demand via
+**Check for Updates…** (app menu, menu-bar menu, Settings). **Settings → Updates** turns the daily check on or off.
+
+- When an update is found, Sparkle shows its release notes and asks before downloading (**Install Update**,
+  then **Install and Relaunch**); silent auto-install is disabled. A background check never takes focus, so
+  keystrokes meant for another app can't accept it; the Dock icon bounces instead.
+- The download must carry an Ed25519 signature from the same key as the Valkey registry (`SUPublicEDKey`).
+  Sparkle replaces the app in place and relaunches it; servers that were running are stopped gracefully and
+  started again.
+- To test against a local feed: `defaults write app.valkey.Valkey updateFeedURL http://127.0.0.1:8000/appcast.xml`.
+
+### Releasing the app
+
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` (always increasing) in `app/Valkey/Info.plist`.
+2. Write `app/release-notes/<version>.md` (Markdown, shown in the update window and on the release page).
+3. Commit, push, then run the **Release app** workflow with the version. It builds the DMG and zip, publishes
+   the `app-v<version>` GitHub release (marked Latest), signs the zip into `website/appcast.xml`
+   (`app/scripts/appcast.swift`), commits it, and redeploys the site.
 
 ## Website
 
