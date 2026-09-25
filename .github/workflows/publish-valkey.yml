@@ -32,7 +32,7 @@ jobs:
         run: |
           TAG="valkey-$VERSION"
           gh release view "$TAG" >/dev/null 2>&1 ||
-            gh release create "$TAG" --title "Valkey $VERSION" \
+            gh release create "$TAG" --title "Valkey $VERSION" --latest=false \
               --notes "Universal macOS build of Valkey $VERSION for Valkey.app."
           gh release upload "$TAG" "registry/dist/$ASSET" --clobber
 
