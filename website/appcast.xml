@@ -5,19 +5,31 @@
         <link>https://valkey.app/appcast.xml</link>
         <description>Valkey.app updates</description>
         <item>
+            <title>Version 1.3.1</title>
+            <pubDate>Fri, 25 Sep 2026 21:08:13 +0000</pubDate>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>1.3.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## Fixes
+
+- **Settings… in the menu-bar menu now opens Settings when no Valkey window is open.** Before, it opened the Settings window behind your other apps, so it looked like nothing happened. **Open Valkey…** now brings Valkey forward the same way.
+]]></description>
+            <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.3.1/Valkey.app.zip" length="1584439" type="application/octet-stream" sparkle:edSignature="VNyXBNndKez7Q0aYyq8+RmaiOjKmSjeD5EMzkEvxeU5xjNsIDm/lryqws5dsWyTLjn61luK+PogyjEnCABdlAw=="/>
+        </item>
+        <item>
             <title>Version 1.3</title>
             <pubDate>Fri, 25 Sep 2026 20:56:25 +0000</pubDate>
             <sparkle:version>4</sparkle:version>
             <sparkle:shortVersionString>1.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## What's new
+            <description sparkle:format="markdown">## What's new
 
 - **Quit Completely** in the Valkey menu. While the menu-bar icon is shown, ⌘Q closes Valkey to the menu bar and keeps your servers running. Quit Completely really quits and stops your servers. With the menu-bar icon turned off, ⌘Q already quits, so the item is hidden.
 
 ## Fixes
 
 - The menu-bar menu no longer shows ⌘Q next to **Quit Valkey.app** or ⌘, next to **Settings…**. Those shortcuts don't do what the hint suggested: ⌘Q only closes to the menu bar. ⌘, still opens Settings from the Valkey menu.
-]]></description>
+</description>
             <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.3/Valkey.app.zip" length="1582121" type="application/octet-stream" sparkle:edSignature="qFNB/UxDHWSlbG6kLfZl9a5F8G5Er6KarioduUahbrUvspQTv7nkyBlm/zaL/ny2s//sMKV26Aw2R2HD9WHGAA=="/>
         </item>
         <item>
