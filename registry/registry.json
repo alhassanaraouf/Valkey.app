@@ -5,6 +5,50 @@
         "arm64",
         "x86_64"
       ],
+      "file" : "libvalkey_bloom.dylib",
+      "id" : "bloom-1.0.1-valkey8.0",
+      "minimumMacOS" : "13.0",
+      "name" : "bloom",
+      "published" : "2026-09-26",
+      "sha256" : "c277be6a21e4fcfdd4cbe6558cead836cee5270f67ea3b88d543c7ef928d5132",
+      "size" : 2022016,
+      "sourceCommit" : "43b4e704bc8d6bd5f65529c8bd7e8488f2d54080",
+      "summary" : "Scalable Bloom filters for fast membership checks (BF.ADD, BF.EXISTS, …).",
+      "title" : "Bloom",
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/module-bloom-1.0.1/bloom-1.0.1-valkey8.0.tar.gz",
+      "valkey" : [
+        "8.0"
+      ],
+      "version" : "1.0.1"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "file" : "libvalkey_bloom.dylib",
+      "id" : "bloom-1.0.1",
+      "minimumMacOS" : "13.0",
+      "name" : "bloom",
+      "published" : "2026-09-26",
+      "sha256" : "6d5bb5134fcd110b1a349e59fd937b56d9b1562bb2c8643fc0e7473d2a5ce4d1",
+      "size" : 2021179,
+      "sourceCommit" : "43b4e704bc8d6bd5f65529c8bd7e8488f2d54080",
+      "summary" : "Scalable Bloom filters for fast membership checks (BF.ADD, BF.EXISTS, …).",
+      "title" : "Bloom",
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/module-bloom-1.0.1/bloom-1.0.1.tar.gz",
+      "valkey" : [
+        "8.1",
+        "9.0",
+        "9.1"
+      ],
+      "version" : "1.0.1"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
       "file" : "libjson.dylib",
       "id" : "json-1.0.3",
       "minimumMacOS" : "13.0",
