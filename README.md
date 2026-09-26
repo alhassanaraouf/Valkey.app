@@ -76,6 +76,22 @@ and deployed with the website.
 - Each package is a `.tar.gz` with `bin/valkey-server`, `bin/valkey-cli` (universal, signed) and Valkey's `COPYING`.
 - To test against another registry: `defaults write app.valkey.Valkey registryURL http://127.0.0.1:8000/registry.json`.
 
+### Modules
+
+Official Valkey modules (JSON and Bloom so far) are listed under `modules` in the same signed registry
+and turned on per server in **Server Settings → Modules**. The app starts the server with `--loadmodule`
+for each, and refuses to start it if an enabled module isn't installed, since data saved with a module
+won't load without it.
+
+- Each build lists the Valkey minor lines it was tested with (`valkey`) and the architectures it contains;
+  the app offers only matching builds. Some modules need different builds per line (Bloom has one for 8.0).
+- Installed builds live in `~/Library/Application Support/Valkey/Modules/<id>/`.
+- Publish with the **Publish module** workflow (module + version). `registry/scripts/package-module.sh`
+  builds a universal `.dylib` hermetically (`hermetic.cmake` keeps Homebrew packages out), then
+  `registry/scripts/check-module.sh` runs it against the newest registry Valkey of every claimed line —
+  startup must finish within 10s (an incompatible module can hang), module commands must work, and
+  module data must survive a restart — before anything is uploaded.
+
 ### Publishing a Valkey version
 
 Run the **Publish Valkey version** workflow (Actions → Run workflow) with e.g. `9.1.3`. It:

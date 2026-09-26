@@ -47,5 +47,28 @@ struct RegistryCheck {
             precondition(store.installed.isEmpty, "corrupted download left files behind")
         }
         print("ok: corrupted download rejected")
+
+        // 4. Modules: only this Mac's architecture is offered; the build installs and resolves by Valkey line.
+        precondition(store.availableModules.map(\.id) == ["fake-1.0"], "unexpected modules \(store.availableModules.map(\.id))")
+        let moduleTarball = site.appendingPathComponent("fake-1.0.tar.gz")
+        try await store.install(store.availableModules[0])
+        precondition(store.installedModules.map(\.id) == ["fake-1.0"], "module install failed")
+        precondition(store.installedModule("fake", for: "9.9.4")?.id == "fake-1.0", "module didn't resolve for 9.9.x")
+        precondition(store.installedModule("fake", for: "9.8.0") == nil, "module resolved for an untested line")
+        precondition(FileManager.default.isExecutableFile(atPath: store.modulePath(store.installedModules[0]).path))
+        print("ok: module installed, offered only for its architecture and Valkey line")
+
+        // 5. A corrupted module download is discarded too.
+        store.remove(store.installedModules[0])
+        var moduleBytes = try Data(contentsOf: moduleTarball)
+        moduleBytes[moduleBytes.count / 2] ^= 0xFF
+        try moduleBytes.write(to: moduleTarball)
+        do {
+            try await store.install(store.availableModules[0])
+            preconditionFailure("corrupted module installed")
+        } catch {
+            precondition(store.installedModules.isEmpty, "corrupted module left files behind")
+        }
+        print("ok: corrupted module download rejected")
     }
 }

@@ -10,6 +10,13 @@ final class ValkeyServer: ObservableObject, Identifiable {
         var port: Int
         var dataDirectory: String
         var startAutomatically = false
+        /// Names of modules to load ("json", "bloom", …). Optional so configs saved before modules decode.
+        var modules: [String]?
+
+        var enabledModules: [String] {
+            get { modules ?? [] }
+            set { modules = newValue.isEmpty ? nil : newValue }
+        }
     }
 
     nonisolated static let rootDir = FileManager.default.homeDirectoryForCurrentUser
@@ -17,7 +24,8 @@ final class ValkeyServer: ObservableObject, Identifiable {
     @Published var config: Config {
         didSet {
             onConfigChange?()
-            if isRunning && (config.port != oldValue.port || config.version != oldValue.version) { restart() }
+            if isRunning && (config.port != oldValue.port || config.version != oldValue.version
+                             || config.enabledModules != oldValue.enabledModules) { restart() }
         }
     }
     /// True while the process is alive (including while it shuts down).
@@ -88,12 +96,22 @@ final class ValkeyServer: ObservableObject, Identifiable {
             failure = "Valkey \(config.version) isn't installed. Install it from Versions…, or choose another version in Server Settings."
             return
         }
+        // Refuse to start without an enabled module: data saved with it won't load without it.
+        var moduleArgs: [String] = []
+        for name in config.enabledModules {
+            guard let module = VersionStore.shared.installedModule(name, for: config.version) else {
+                failure = "The \(name) module isn't installed for Valkey \(VersionStore.line(of: config.version)). "
+                    + "Open Server Settings to install it, or turn it off."
+                return
+            }
+            moduleArgs += ["--loadmodule", VersionStore.shared.modulePath(module).path]
+        }
         ensureDataDir()
         let p = Process()
         p.executableURL = server
         // logfile "" = stdout, so startup errors (bad config, port in use) reach the log too.
         p.arguments = [confURL.path, "--port", "\(config.port)", "--dir", dataDir.path,
-                       "--pidfile", pidURL.path, "--logfile", "", "--daemonize", "no"]
+                       "--pidfile", pidURL.path, "--logfile", "", "--daemonize", "no"] + moduleArgs
 
         let pipe = Pipe()
         p.standardOutput = pipe

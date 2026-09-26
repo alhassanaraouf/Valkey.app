@@ -76,6 +76,10 @@ enum MainWindow {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Registered last so it replaces AppKit's/SwiftUI's default quit handler.
+        NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleQuitEvent(_:withReplyEvent:)),
+                                                     forEventClass: AEEventClass(kCoreEventClass),
+                                                     andEventID: AEEventID(kAEQuitApplication))
         // Auto-start servers, plus any that were running before an update relaunched the app.
         let resume = Set(Updater.takeServersToResume())
         ServerStore.shared.servers
@@ -127,12 +131,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         reallyQuit = true
     }
 
-    /// ⌘Q (a quit with no Apple Event behind it) only closes the windows while the menu-bar icon is
-    /// shown. The menu-bar Quit and quits from the Dock, logout/shutdown or scripts (Apple Events)
-    /// really quit, stopping every server first.
+    /// Quit Apple Events come from the Dock's Quit, logout/restart/shutdown and scripts: always a real
+    /// quit. Handling the event ourselves (rather than checking currentAppleEvent in
+    /// applicationShouldTerminate) is reliable: SwiftUI can deliver the terminate after the event ends,
+    /// which made those quits look like ⌘Q and get cancelled, blocking logout.
+    @objc private func handleQuitEvent(_ event: NSAppleEventDescriptor, withReplyEvent reply: NSAppleEventDescriptor) {
+        Self.quitCompletely()
+    }
+
+    /// ⌘Q only closes the windows while the menu-bar icon is shown. The menu-bar Quit, Quit Completely,
+    /// updates and quit Apple Events really quit, stopping every server first.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let menuBarShown = UserDefaults.standard.object(forKey: SettingsKey.showMenuBarExtra) as? Bool ?? true
-        if menuBarShown && !Self.reallyQuit && NSAppleEventManager.shared().currentAppleEvent == nil {
+        if menuBarShown && !Self.reallyQuit {
             // Titled windows only: the menu-bar icon is a window too.
             NSApp.windows
                 .filter { ($0.isVisible || $0.isMiniaturized) && $0.styleMask.contains(.titled) }

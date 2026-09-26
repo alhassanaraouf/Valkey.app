@@ -133,6 +133,12 @@ private struct ServerDetailView: View {
                         StatusIcon(server: server)
                         Text(statusText).font(.title3)
                     }
+                    if !server.config.enabledModules.isEmpty {
+                        Text("Modules: " + server.config.enabledModules.map { name in
+                            VersionStore.shared.knownModules.first { $0.name == name }?.title ?? name
+                        }.joined(separator: ", "))
+                        .font(.callout).foregroundColor(.secondary)
+                    }
                     if let failure = server.failure {
                         Text(failure).font(.callout).foregroundColor(.red)
                     }

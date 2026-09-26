@@ -24,6 +24,12 @@
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--card); }
     th { color: var(--muted); font-weight: 500; font-size: 14px; }
+    ol.steps { padding-left: 22px; }
+    ol.steps li { margin-bottom: 10px; }
+    details { background: var(--card); border-radius: 12px; padding: 12px 16px; margin-top: 12px; }
+    summary { cursor: pointer; font-weight: 600; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+    pre { background: var(--card); padding: 10px 12px; border-radius: 8px; overflow-x: auto; }
     footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
     a { color: var(--accent); }
   </style>
@@ -35,9 +41,43 @@
     <h1>Valkey.app</h1>
     <p class="lead">The easiest way to run <a href="https://valkey.io">Valkey</a> on your Mac.</p>
     <a class="button" href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download for macOS</a>
-    <p class="note">macOS 13 or later · Apple Silicon and Intel ·
+    <p class="note">macOS 13 or later · Apple Silicon and Intel · <a href="#install">install steps</a> ·
       <a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest">release notes</a></p>
   </header>
+
+  <h2 id="install">Install</h2>
+  <ol class="steps">
+    <li><a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download Valkey.dmg</a>,
+      open it, and drag <strong>Valkey.app</strong> into <strong>Applications</strong>.</li>
+    <li>Open Valkey.app from Applications. macOS blocks the first launch because Valkey.app isn't
+      notarized by Apple yet. Allow it once, as shown below.</li>
+    <li>Click <strong>Create Server…</strong>, pick a Valkey version, and it's downloaded and set up.
+      From then on Valkey.app updates itself.</li>
+  </ol>
+
+  <details open>
+    <summary>Allow Valkey.app on macOS 15 Sequoia and later</summary>
+    <ol class="steps">
+      <li>Open Valkey.app once. When macOS says it can't be verified, click <strong>Done</strong>.</li>
+      <li>Open <strong>System Settings → Privacy &amp; Security</strong> and scroll to <strong>Security</strong>.</li>
+      <li>Next to “Valkey.app was blocked to protect your Mac”, click <strong>Open Anyway</strong>, then confirm with
+        your password or Touch ID.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>Allow Valkey.app on macOS 13 Ventura or 14 Sonoma</summary>
+    <ol class="steps">
+      <li>In Applications, Control-click (or right-click) Valkey.app and choose <strong>Open</strong>.</li>
+      <li>Click <strong>Open</strong> in the dialog.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>Prefer the Terminal?</summary>
+    <p>This removes the download quarantine flag, so macOS won't block the first launch:</p>
+    <pre>xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
+  </details>
+  <p class="note">You only need to do this once. Updates and Valkey versions installed by the app aren't
+    blocked, and every download is checked against its published signature and checksum.</p>
 
   <h2>Features</h2>
   <ul class="features">
@@ -45,6 +85,7 @@
     <li><strong>Any Valkey version</strong>Install versions from a signed registry — new releases arrive without an app update.</li>
     <li><strong>Live logs</strong>Every server has its own log, right in the window.</li>
     <li><strong>Menu bar</strong>Start, stop and connect with <code>valkey-cli</code> from the menu bar.</li>
+    <li><strong>Modules</strong>Add official modules like JSON and Bloom to any server, matched to its Valkey version.</li>
   </ul>
 
   <h2>Available Valkey versions</h2>
@@ -52,6 +93,14 @@
     <thead><tr><th>Version</th><th>Published</th><th>Size</th></tr></thead>
     <tbody id="versions"><tr><td colspan="3">Loading…</td></tr></tbody>
   </table>
+  <h2>Modules</h2>
+  <table>
+    <thead><tr><th>Module</th><th>Works with</th><th>Size</th></tr></thead>
+    <tbody id="modules"><tr><td colspan="3">Loading…</td></tr></tbody>
+  </table>
+  <p class="note">Official Valkey modules, turned on per server. Each build is tested against every Valkey
+    version it's listed for before it's published.</p>
+
   <p class="note">Every download is listed with its SHA-256 in the Ed25519-signed
     <a href="registry.json">registry.json</a>; the app verifies both before installing.</p>
 
@@ -61,12 +110,15 @@
   </footer>
 </main>
 <script>
-  fetch("registry.json").then(r => r.json()).then(({ versions }) => {
-    const rows = versions.map(v =>
-      `<tr><td>Valkey ${v.version}</td><td>${v.published}</td><td>${(v.size / 1e6).toFixed(1)} MB</td></tr>`);
+  const mb = bytes => `${(bytes / 1e6).toFixed(1)} MB`;
+  fetch("registry.json").then(r => r.json()).then(({ versions, modules = [] }) => {
+    const rows = versions.map(v => `<tr><td>Valkey ${v.version}</td><td>${v.published}</td><td>${mb(v.size)}</td></tr>`);
     document.getElementById("versions").innerHTML = rows.join("") || '<tr><td colspan="3">No versions published yet.</td></tr>';
+    const moduleRows = modules.map(m => `<tr><td>${m.title} ${m.version}</td><td>Valkey ${m.valkey.join(", ")}</td><td>${mb(m.size)}</td></tr>`);
+    document.getElementById("modules").innerHTML = moduleRows.join("") || '<tr><td colspan="3">No modules published yet.</td></tr>';
   }).catch(() => {
-    document.getElementById("versions").innerHTML = '<tr><td colspan="3">Couldn’t load the registry.</td></tr>';
+    for (const id of ["versions", "modules"])
+      document.getElementById(id).innerHTML = '<tr><td colspan="3">Couldn’t load the registry.</td></tr>';
   });
 </script>
 </body>

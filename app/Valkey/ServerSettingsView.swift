@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Create a new server, or edit an existing one. New servers may pick any known version (it's
 /// installed on Create); existing servers can only move to an installed version that isn't older.
+/// Modules are offered for the chosen version's minor line and installed on save.
 struct ServerSettingsView: View {
     @EnvironmentObject var store: ServerStore
     @EnvironmentObject var versions: VersionStore
@@ -9,15 +10,19 @@ struct ServerSettingsView: View {
     let isNew: Bool
     let onSave: (ValkeyServer.Config) -> Void
     private let originalVersion: String
+    private let originalModules: [String]
     @State private var config: ValkeyServer.Config
     @State private var portText: String
     @State private var customDataDir: String?
     @State private var installError: String?
+    @State private var saving = false
+    @State private var addingModule = false
 
     init(request: SheetRequest, onSave: @escaping (ValkeyServer.Config) -> Void) {
         isNew = request.isNew
         self.onSave = onSave
         originalVersion = request.config.version
+        originalModules = request.config.enabledModules
         _config = State(initialValue: request.config)
         _portText = State(initialValue: String(request.config.port))
     }
@@ -35,7 +40,24 @@ struct ServerSettingsView: View {
         return upgrades.contains(originalVersion) ? upgrades : upgrades + [originalVersion]
     }
 
-    private var isInstalling: Bool { versions.progress[config.version] != nil }
+    private var isInstalling: Bool { saving || versions.progress[config.version] != nil }
+
+    /// Enabled modules without an installed build for the chosen version, with the build to install.
+    private var modulesToInstall: [VersionStore.ModuleEntry] {
+        config.enabledModules.compactMap { name in
+            versions.installedModule(name, for: config.version) == nil ? versions.availableModule(name, for: config.version) : nil
+        }
+    }
+
+    /// An enabled module the chosen version can't load.
+    private var moduleProblem: String? {
+        for name in config.enabledModules where versions.installedModule(name, for: config.version) == nil
+            && versions.availableModule(name, for: config.version) == nil {
+            let title = versions.knownModules.first { $0.name == name }?.title ?? name
+            return "The \(title) module isn't available for Valkey \(VersionStore.line(of: config.version))."
+        }
+        return nil
+    }
 
     private func label(for version: String) -> String {
         guard !versions.installed.contains(version) else { return "Valkey \(version)" }
@@ -45,8 +67,23 @@ struct ServerSettingsView: View {
         return "Valkey \(version) (not installed)"
     }
 
+    private func title(ofModule name: String) -> String {
+        versions.knownModules.first { $0.name == name }?.title ?? name
+    }
+
+    /// Status of an enabled module for the chosen version, and whether it's a problem.
+    private func moduleStatus(_ name: String) -> (text: String, isProblem: Bool) {
+        if let installed = versions.installedModule(name, for: config.version) {
+            return ("Installed \(installed.version)", false)
+        }
+        if let available = versions.availableModule(name, for: config.version) {
+            return ("Downloads \(ByteCountFormatter.string(fromByteCount: Int64(available.size), countStyle: .file)) when you save", false)
+        }
+        return ("Not available for Valkey \(VersionStore.line(of: config.version))", true)
+    }
+
     var body: some View {
-        let problem = config.version.isEmpty ? "No versions available yet." : store.problem(with: result)
+        let problem = config.version.isEmpty ? "No versions available yet." : store.problem(with: result) ?? moduleProblem
         VStack(alignment: .leading, spacing: 16) {
             Text(isNew ? "New Server" : "Server Settings").font(.headline)
             Form {
@@ -68,9 +105,37 @@ struct ServerSettingsView: View {
                     }
                 }
                 Toggle("Start automatically when Valkey.app opens", isOn: $config.startAutomatically)
+                // Only the server's own modules are listed; the full catalog is in Add Module….
+                LabeledContent("Modules") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if config.enabledModules.isEmpty {
+                            Text("None").foregroundColor(.secondary)
+                        }
+                        ForEach(config.enabledModules, id: \.self) { name in
+                            let status = moduleStatus(name)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(title(ofModule: name))
+                                    Text(status.text).font(.caption).foregroundColor(status.isProblem ? .red : .secondary)
+                                }
+                                Spacer()
+                                Button { config.enabledModules.removeAll { $0 == name } } label: {
+                                    Image(systemName: "minus.circle")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Remove \(title(ofModule: name)) from this server")
+                            }
+                        }
+                        Button("Add Module…") { addingModule = true }
+                    }
+                }
             }
             .disabled(isInstalling)
 
+            if !isNew && !Set(originalModules).isSubset(of: config.enabledModules) {
+                Text("Data saved while a module was on can stop this server from starting without that module.")
+                    .font(.callout).foregroundColor(.secondary)
+            }
             if !isNew && config.version != originalVersion {
                 Text("Upgrading to Valkey \(config.version) can't be undone: older versions may not read its data files.")
                     .font(.callout).foregroundColor(.secondary)
@@ -83,6 +148,11 @@ struct ServerSettingsView: View {
             }
             if let fraction = versions.progress[config.version] {
                 ProgressView("Downloading Valkey \(config.version)…", value: fraction)
+            }
+            ForEach(modulesToInstall) { module in
+                if let fraction = versions.progress[module.id] {
+                    ProgressView("Downloading the \(module.title) module…", value: fraction)
+                }
             }
             if let message = installError ?? problem {
                 Text(message).font(.callout).foregroundColor(.red)
@@ -98,6 +168,12 @@ struct ServerSettingsView: View {
         }
         .padding(20)
         .frame(width: 480)
+        .sheet(isPresented: $addingModule) {
+            ModulePickerView(valkeyVersion: config.version, enabled: config.enabledModules) { name in
+                config.enabledModules = (config.enabledModules + [name]).sorted()
+            }
+            .environmentObject(versions)
+        }
         .task {
             if versions.allVersions.isEmpty { await versions.refresh() }
             if config.version.isEmpty, let newest = versions.allVersions.first {
@@ -107,16 +183,19 @@ struct ServerSettingsView: View {
         }
     }
 
-    /// Installs the chosen version first if needed, then saves.
+    /// Installs the chosen version and any modules it needs, then saves.
     private func save() {
         let result = result
+        saving = true
+        installError = nil
         Task {
+            defer { saving = false }
             do {
                 if !versions.installed.contains(result.version),
                    let entry = versions.available.first(where: { $0.version == result.version }) {
-                    installError = nil
                     try await versions.install(entry)
                 }
+                for module in modulesToInstall { try await versions.install(module) }
                 onSave(result)
                 dismiss()
             } catch {

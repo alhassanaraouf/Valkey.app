@@ -20,6 +20,7 @@
 		AA00000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001B /* SettingsView.swift */; };
 		CC000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC000003 /* Sparkle */; };
 		AA00000C /* Updater.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001C /* Updater.swift */; };
+		AA00000D /* ModulePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001D /* ModulePickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		AA00001A /* VersionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionsView.swift; sourceTree = "<group>"; };
 		AA00001B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AA00001C /* Updater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Updater.swift; sourceTree = "<group>"; };
+		AA00001D /* ModulePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModulePickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -58,6 +60,7 @@
 				AA00001A /* VersionsView.swift */,
 				AA00001B /* SettingsView.swift */,
 				AA00001C /* Updater.swift */,
+				AA00001D /* ModulePickerView.swift */,
 				AA000013 /* StatusMenu.swift */,
 				AA000014 /* ServerSettingsView.swift */,
 				AA000016 /* ContentView.swift */,
@@ -159,6 +162,7 @@
 				AA00000A /* VersionsView.swift in Sources */,
 				AA00000B /* SettingsView.swift in Sources */,
 				AA00000C /* Updater.swift in Sources */,
+				AA00000D /* ModulePickerView.swift in Sources */,
 				AA000003 /* StatusMenu.swift in Sources */,
 				AA000004 /* ServerSettingsView.swift in Sources */,
 				AA000006 /* ContentView.swift in Sources */,

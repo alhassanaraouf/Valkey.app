@@ -48,7 +48,7 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "Download **Valkey.dmg**, open it, and drag **Valkey.app** to Applications. Valkey.app 1.2 and later update themselves."
+            echo "Download **Valkey.dmg**, open it, and drag **Valkey.app** to Applications. It isn't notarized yet, so allow it once on first launch: [install steps](https://valkey.app/#install). Valkey.app 1.2 and later update themselves."
             echo
             echo "## Checksums (SHA-256)"
             echo
