@@ -1,0 +1,5 @@
+# Everything on valkey.app is public: search engines and AI assistants are welcome.
+User-agent: *
+Allow: /
+
+Sitemap: https://valkey.app/sitemap.xml

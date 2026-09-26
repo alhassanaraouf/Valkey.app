@@ -1,0 +1,24 @@
+# Valkey.app
+
+> Valkey.app is a free, open-source (Apache 2.0), native macOS app for running Valkey — the open-source,
+> BSD-licensed Redis alternative maintained under the Linux Foundation — on a Mac. It is to Valkey what
+> Postgres.app is to PostgreSQL: local servers without Homebrew, Docker or a terminal.
+
+- Runs on macOS 13 Ventura or later, Apple Silicon and Intel (universal binaries).
+- Several Valkey servers side by side, each with its own name, port, Valkey version, data directory and live log.
+- Valkey versions (7.2, 8.0, 8.1, 9.0 and 9.1 lines) and official modules (JSON, Bloom) install from a signed
+  registry, so new releases arrive without an app update. Every download is verified against an Ed25519-signed
+  list of SHA-256 checksums.
+- Modules are added per server and matched to the server's Valkey version.
+- Menu-bar icon to start, stop and connect with valkey-cli; the app updates itself (with confirmation).
+- Not yet notarized by Apple: on first launch, allow it in System Settings → Privacy & Security → Open Anyway
+  (macOS 15+) or Control-click → Open (macOS 13–14).
+
+## Links
+
+- [Website](https://valkey.app/): overview, install steps, available versions and modules, FAQ
+- [Download Valkey.dmg](https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg): latest release
+- [Release notes](https://github.com/alhassanaraouf/Valkey.app/releases/latest)
+- [Source code](https://github.com/alhassanaraouf/Valkey.app) (GitHub)
+- [Registry](https://valkey.app/registry.json): machine-readable list of installable Valkey versions and modules
+- [Valkey](https://valkey.io/): the Valkey project itself

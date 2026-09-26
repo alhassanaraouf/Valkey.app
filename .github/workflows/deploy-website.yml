@@ -38,6 +38,9 @@ jobs:
           mkdir _site
           cp -R website/. _site/
           cp registry/registry.json registry/registry.json.sig _site/
+          # Versions, modules and FAQ answers as plain HTML (crawlers don't run JavaScript), plus sitemap.xml.
+          python3 website/render.py registry/registry.json _site
+          rm _site/render.py _site/og-image.svg
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

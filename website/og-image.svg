@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#15191d"/>
+      <stop offset="1" stop-color="#1f2a38"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(96 150) scale(5.4)" fill="#ffffff">
+    <path d="M15.2,50l-9.4-5.9v-25L28.8,6l22.3,13.1v26.3l-22.7,12.8-7.9-4.9v-12l-4.3-2.7v-13.6l12.4-7.1,12.1,7.1v14.2l-9.6,5.4v-5.7c2.9-1.1,4.9-3.9,4.9-7.3s-3.4-7.8-7.6-7.8-7.6,3.5-7.6,7.8,2.1,6.2,4.9,7.3v10.9l2.7,1.7,16.8-9.5v-19.7l-16.6-9.8-17.1,9.8v18.5l3.6,2.3v6.8ZM28.5,28.1c1.9,0,3.4,1.6,3.4,3.6s-1.5,3.6-3.4,3.6-3.4-1.6-3.4-3.6,1.5-3.6,3.4-3.6Z"/>
+  </g>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#ffffff">
+    <text x="470" y="270" font-size="92" font-weight="700">Valkey.app</text>
+    <text x="472" y="345" font-size="38" fill="#c8d2dc">Run Valkey servers on your Mac.</text>
+    <text x="472" y="400" font-size="30" fill="#8fa0b0">Any version · Modules · Live logs · Menu bar</text>
+    <text x="472" y="480" font-size="26" fill="#6f8294">Free · macOS 13+ · Apple Silicon &amp; Intel</text>
+  </g>
+</svg>

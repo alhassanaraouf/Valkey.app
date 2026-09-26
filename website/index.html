@@ -3,21 +3,95 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Valkey.app — Valkey servers on your Mac</title>
-  <meta name="description" content="A native macOS app to run Valkey servers locally: multiple servers, any version, one click.">
+  <title>Valkey.app — Run Valkey on your Mac (free macOS app)</title>
+  <meta name="description" content="Free, native macOS app for running Valkey, the open-source Redis alternative, on your Mac: several servers, any version, JSON and Bloom modules, live logs.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://valkey.app/">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+
+  <!-- Link previews: Open Graph (Reddit, Slack, iMessage, LinkedIn…) and X/Twitter cards -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Valkey.app">
+  <meta property="og:url" content="https://valkey.app/">
+  <meta property="og:title" content="Valkey.app — Run Valkey on your Mac">
+  <meta property="og:description" content="A free, native macOS app for running Valkey servers locally: any version, modules, live logs and a menu-bar icon.">
+  <meta property="og:image" content="https://valkey.app/og.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Valkey.app — Run Valkey on your Mac">
+  <meta name="twitter:description" content="A free, native macOS app for running Valkey servers locally: any version, modules, live logs and a menu-bar icon.">
+  <meta name="twitter:image" content="https://valkey.app/og.jpg">
+  <meta name="twitter:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
+
+  <!-- Structured data. The FAQ answers must match the visible FAQ below; render.py fills both. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://valkey.app/#app",
+        "name": "Valkey.app",
+        "url": "https://valkey.app/",
+        "description": "A free, native macOS app for running Valkey, the open-source Redis alternative, locally: several servers side by side, any Valkey version, modules, live logs and a menu-bar icon.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS 13 or later",
+        "softwareRequirements": "macOS 13 Ventura or later on Apple Silicon or Intel",
+        "downloadUrl": "https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg",
+        "releaseNotes": "https://github.com/alhassanaraouf/Valkey.app/releases/latest",
+        "image": "https://valkey.app/og.jpg",
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "sameAs": ["https://github.com/alhassanaraouf/Valkey.app"]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://valkey.app/#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "What is Valkey.app?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app is a free, open-source macOS app for running Valkey servers on your Mac, in the spirit of Postgres.app. Each server gets its own port, Valkey version, data directory and live log, and you can start, stop and connect to them from the window or the menu bar." } },
+          { "@type": "Question", "name": "What is Valkey?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Valkey is an open-source (BSD-licensed), high-performance key-value datastore maintained under the Linux Foundation. It was forked from Redis 7.2.4 and speaks the Redis protocol, so existing Redis clients, libraries and tools work with it." } },
+          { "@type": "Question", "name": "Which Valkey versions can Valkey.app run?",
+            "acceptedAnswer": { "@type": "Answer", "text": "{{VERSIONS_ANSWER}}" } },
+          { "@type": "Question", "name": "Does Valkey.app support Valkey modules?",
+            "acceptedAnswer": { "@type": "Answer", "text": "{{MODULES_ANSWER}}" } },
+          { "@type": "Question", "name": "Is Valkey.app free?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Valkey.app is free and open source under the Apache License 2.0. Valkey itself is BSD-licensed." } },
+          { "@type": "Question", "name": "Which Macs does Valkey.app run on?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Any Mac with macOS 13 Ventura or later, on Apple Silicon or Intel. The app and every Valkey build it installs are universal binaries." } },
+          { "@type": "Question", "name": "Why does macOS say Valkey.app can't be verified?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15 and later, open System Settings, go to Privacy & Security and click Open Anyway; on macOS 13 and 14, Control-click the app and choose Open. Updates install without this step." } }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <style>
     :root { color-scheme: light dark; --fg: #1a2026; --muted: #5b6570; --bg: #fff; --card: #f4f6f8; --accent: #2f6fdb; }
     @media (prefers-color-scheme: dark) { :root { --fg: #e8ecef; --muted: #9aa4ae; --bg: #15191d; --card: #1f252b; } }
     * { box-sizing: border-box; }
     body { margin: 0; font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
     main { max-width: 760px; margin: 0 auto; padding: 72px 24px; }
-    header { text-align: center; margin-bottom: 56px; }
+    header { text-align: center; margin-bottom: 40px; }
     header svg { width: 96px; height: 96px; fill: currentColor; }
     h1 { font-size: 44px; margin: 16px 0 8px; letter-spacing: -0.02em; }
     .lead { font-size: 20px; color: var(--muted); margin: 0 0 28px; }
     .button { display: inline-block; background: var(--accent); color: #fff; padding: 12px 26px; border-radius: 10px; text-decoration: none; font-weight: 600; }
     .note { color: var(--muted); font-size: 14px; margin-top: 10px; }
     h2 { font-size: 24px; margin: 48px 0 16px; }
+    h3 { font-size: 17px; margin: 24px 0 6px; }
     ul.features { list-style: none; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
     ul.features li { background: var(--card); border-radius: 12px; padding: 16px 18px; }
     ul.features strong { display: block; }
@@ -30,6 +104,7 @@
     summary { cursor: pointer; font-weight: 600; }
     code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
     pre { background: var(--card); padding: 10px 12px; border-radius: 8px; overflow-x: auto; }
+    .faq p { margin: 0 0 8px; }
     footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
     a { color: var(--accent); }
   </style>
@@ -37,13 +112,18 @@
 <body>
 <main>
   <header>
-    <svg viewBox="0 0 60 60" role="img" aria-label="Valkey logo"><path d="M15.2,50l-9.4-5.9v-25L28.8,6l22.3,13.1v26.3l-22.7,12.8-7.9-4.9v-12l-4.3-2.7v-13.6l12.4-7.1,12.1,7.1v14.2l-9.6,5.4v-5.7c2.9-1.1,4.9-3.9,4.9-7.3s-3.4-7.8-7.6-7.8-7.6,3.5-7.6,7.8,2.1,6.2,4.9,7.3v10.9l2.7,1.7,16.8-9.5v-19.7l-16.6-9.8-17.1,9.8v18.5l3.6,2.3v6.8ZM28.5,28.1c1.9,0,3.4,1.6,3.4,3.6s-1.5,3.6-3.4,3.6-3.4-1.6-3.4-3.6,1.5-3.6,3.4-3.6Z"/></svg>
+    <svg viewBox="0 0 60 60" role="img" aria-label="Valkey.app logo"><path d="M15.2,50l-9.4-5.9v-25L28.8,6l22.3,13.1v26.3l-22.7,12.8-7.9-4.9v-12l-4.3-2.7v-13.6l12.4-7.1,12.1,7.1v14.2l-9.6,5.4v-5.7c2.9-1.1,4.9-3.9,4.9-7.3s-3.4-7.8-7.6-7.8-7.6,3.5-7.6,7.8,2.1,6.2,4.9,7.3v10.9l2.7,1.7,16.8-9.5v-19.7l-16.6-9.8-17.1,9.8v18.5l3.6,2.3v6.8ZM28.5,28.1c1.9,0,3.4,1.6,3.4,3.6s-1.5,3.6-3.4,3.6-3.4-1.6-3.4-3.6,1.5-3.6,3.4-3.6Z"/></svg>
     <h1>Valkey.app</h1>
     <p class="lead">The easiest way to run <a href="https://valkey.io">Valkey</a> on your Mac.</p>
     <a class="button" href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download for macOS</a>
-    <p class="note">macOS 13 or later · Apple Silicon and Intel · <a href="#install">install steps</a> ·
+    <p class="note">Free · macOS 13 or later · Apple Silicon and Intel · <a href="#install">install steps</a> ·
       <a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest">release notes</a></p>
   </header>
+
+  <p><strong>Valkey.app</strong> is a free, native macOS app for running <a href="https://valkey.io">Valkey</a>,
+    the open-source Redis alternative, on your Mac. Like Postgres.app does for PostgreSQL, it runs local
+    Valkey servers without Homebrew, Docker or a terminal: each server has its own port, Valkey version,
+    data directory and live log.</p>
 
   <h2 id="install">Install</h2>
   <ol class="steps">
@@ -83,43 +163,58 @@
   <ul class="features">
     <li><strong>Multiple servers</strong>Run several servers side by side, each on its own port and data directory.</li>
     <li><strong>Any Valkey version</strong>Install versions from a signed registry — new releases arrive without an app update.</li>
+    <li><strong>Modules</strong>Add official modules like JSON and Bloom to any server, matched to its Valkey version.</li>
     <li><strong>Live logs</strong>Every server has its own log, right in the window.</li>
     <li><strong>Menu bar</strong>Start, stop and connect with <code>valkey-cli</code> from the menu bar.</li>
-    <li><strong>Modules</strong>Add official modules like JSON and Bloom to any server, matched to its Valkey version.</li>
+    <li><strong>Automatic updates</strong>See the release notes and confirm before anything is installed.</li>
   </ul>
 
-  <h2>Available Valkey versions</h2>
+  <h2 id="versions">Available Valkey versions</h2>
   <table>
     <thead><tr><th>Version</th><th>Published</th><th>Size</th></tr></thead>
-    <tbody id="versions"><tr><td colspan="3">Loading…</td></tr></tbody>
+    <tbody><!--VERSIONS--></tbody>
   </table>
-  <h2>Modules</h2>
+
+  <h2 id="modules">Modules</h2>
   <table>
     <thead><tr><th>Module</th><th>Works with</th><th>Size</th></tr></thead>
-    <tbody id="modules"><tr><td colspan="3">Loading…</td></tr></tbody>
+    <tbody><!--MODULES--></tbody>
   </table>
   <p class="note">Official Valkey modules, turned on per server. Each build is tested against every Valkey
     version it's listed for before it's published.</p>
-
   <p class="note">Every download is listed with its SHA-256 in the Ed25519-signed
-    <a href="registry.json">registry.json</a>; the app verifies both before installing.</p>
+    <a href="/registry.json">registry.json</a>; the app verifies both before installing.</p>
+
+  <h2 id="faq">Frequently asked questions</h2>
+  <div class="faq">
+    <h3>What is Valkey.app?</h3>
+    <p>Valkey.app is a free, open-source macOS app for running Valkey servers on your Mac, in the spirit of
+      Postgres.app. Each server gets its own port, Valkey version, data directory and live log, and you can
+      start, stop and connect to them from the window or the menu bar.</p>
+    <h3>What is Valkey?</h3>
+    <p>Valkey is an open-source (BSD-licensed), high-performance key-value datastore maintained under the
+      Linux Foundation. It was forked from Redis 7.2.4 and speaks the Redis protocol, so existing Redis
+      clients, libraries and tools work with it.</p>
+    <h3>Which Valkey versions can Valkey.app run?</h3>
+    <p>{{VERSIONS_ANSWER}}</p>
+    <h3>Does Valkey.app support Valkey modules?</h3>
+    <p>{{MODULES_ANSWER}}</p>
+    <h3>Is Valkey.app free?</h3>
+    <p>Yes. Valkey.app is free and open source under the Apache License 2.0. Valkey itself is BSD-licensed.</p>
+    <h3>Which Macs does Valkey.app run on?</h3>
+    <p>Any Mac with macOS 13 Ventura or later, on Apple Silicon or Intel. The app and every Valkey build it
+      installs are universal binaries.</p>
+    <h3>Why does macOS say Valkey.app can't be verified?</h3>
+    <p>Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15
+      and later, open System Settings, go to Privacy &amp; Security and click Open Anyway; on macOS 13 and 14,
+      Control-click the app and choose Open. Updates install without this step.
+      <a href="#install">Step-by-step instructions</a>.</p>
+  </div>
 
   <footer>
     <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
     Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
   </footer>
 </main>
-<script>
-  const mb = bytes => `${(bytes / 1e6).toFixed(1)} MB`;
-  fetch("registry.json").then(r => r.json()).then(({ versions, modules = [] }) => {
-    const rows = versions.map(v => `<tr><td>Valkey ${v.version}</td><td>${v.published}</td><td>${mb(v.size)}</td></tr>`);
-    document.getElementById("versions").innerHTML = rows.join("") || '<tr><td colspan="3">No versions published yet.</td></tr>';
-    const moduleRows = modules.map(m => `<tr><td>${m.title} ${m.version}</td><td>Valkey ${m.valkey.join(", ")}</td><td>${mb(m.size)}</td></tr>`);
-    document.getElementById("modules").innerHTML = moduleRows.join("") || '<tr><td colspan="3">No modules published yet.</td></tr>';
-  }).catch(() => {
-    for (const id of ["versions", "modules"])
-      document.getElementById(id).innerHTML = '<tr><td colspan="3">Couldn’t load the registry.</td></tr>';
-  });
-</script>
 </body>
 </html>
