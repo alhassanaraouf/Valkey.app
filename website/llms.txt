@@ -17,6 +17,7 @@
 ## Links
 
 - [Website](https://valkey.app/): overview, install steps, available versions and modules, FAQ
+- [How to install Valkey on Mac](https://valkey.app/install-valkey-on-mac/): Valkey.app, Homebrew, Docker or from source, compared
 - [Download Valkey.dmg](https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg): latest release
 - [Release notes](https://github.com/alhassanaraouf/Valkey.app/releases/latest)
 - [Source code](https://github.com/alhassanaraouf/Valkey.app) (GitHub)

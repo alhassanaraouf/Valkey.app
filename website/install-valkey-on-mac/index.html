@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How to Install Valkey on Mac (macOS guide, 2026)</title>
+  <meta name="description" content="Four ways to install and run Valkey on macOS: Valkey.app, Homebrew, Docker or from source, with commands, how to connect, and which to choose.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://valkey.app/install-valkey-on-mac/">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Valkey.app">
+  <meta property="og:url" content="https://valkey.app/install-valkey-on-mac/">
+  <meta property="og:title" content="How to install Valkey on Mac">
+  <meta property="og:description" content="Four ways to run Valkey on macOS — Valkey.app, Homebrew, Docker or from source — and which to choose.">
+  <meta property="og:image" content="https://valkey.app/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to install Valkey on Mac">
+  <meta name="twitter:description" content="Four ways to run Valkey on macOS — Valkey.app, Homebrew, Docker or from source — and which to choose.">
+  <meta name="twitter:image" content="https://valkey.app/og.jpg">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "@id": "https://valkey.app/install-valkey-on-mac/#article",
+        "headline": "How to install Valkey on Mac",
+        "description": "Four ways to install and run Valkey on macOS: Valkey.app, Homebrew, Docker or from source.",
+        "url": "https://valkey.app/install-valkey-on-mac/",
+        "image": "https://valkey.app/og.jpg",
+        "datePublished": "2026-09-27",
+        "dateModified": "2026-09-27",
+        "inLanguage": "en",
+        "about": [{ "@type": "Thing", "name": "Valkey", "sameAs": "https://valkey.io/" },
+                  { "@type": "Thing", "name": "macOS" }],
+        "publisher": { "@id": "https://valkey.app/#website" },
+        "mainEntityOfPage": "https://valkey.app/install-valkey-on-mac/"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Valkey.app", "item": "https://valkey.app/" },
+          { "@type": "ListItem", "position": 2, "name": "Install Valkey on Mac", "item": "https://valkey.app/install-valkey-on-mac/" }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    :root { color-scheme: light dark; --fg: #1a2026; --muted: #5b6570; --bg: #fff; --card: #f4f6f8; --accent: #2f6fdb; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e8ecef; --muted: #9aa4ae; --bg: #15191d; --card: #1f252b; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+    main { max-width: 760px; margin: 0 auto; padding: 56px 24px 72px; }
+    nav { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    h1 { font-size: 38px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.02em; }
+    h2 { font-size: 24px; margin: 44px 0 12px; }
+    .lead { font-size: 19px; color: var(--muted); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+    pre { background: var(--card); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--card); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; }
+    .button { display: inline-block; background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+    footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <nav><a href="/">Valkey.app</a> › Install Valkey on Mac</nav>
+
+  <h1>How to install Valkey on Mac</h1>
+  <p class="lead">There are four ways to run <a href="https://valkey.io">Valkey</a>, the open-source Redis
+    alternative, on macOS: a native app, Homebrew, Docker, or building from source. All of them work on
+    Apple Silicon and Intel Macs. Here's how each one works and which to pick.</p>
+
+  <h2>Which one should you use?</h2>
+  <table>
+    <thead><tr><th></th><th>Valkey.app</th><th>Homebrew</th><th>Docker</th><th>From source</th></tr></thead>
+    <tbody>
+      <tr><td>Terminal needed</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Several versions side by side</td><td>Yes</td><td>No</td><td>Yes</td><td>Manually</td></tr>
+      <tr><td>Several servers at once</td><td>Yes, one click each</td><td>Manually</td><td>Yes</td><td>Manually</td></tr>
+      <tr><td>Modules (JSON, Bloom)</td><td>Built in</td><td>Build yourself</td><td>valkey-bundle image</td><td>Build yourself</td></tr>
+      <tr><td>Starts at login</td><td>Optional</td><td><code>brew services</code></td><td>With Docker</td><td>Manually</td></tr>
+      <tr><td>Extra software</td><td>None</td><td>Homebrew</td><td>Docker Desktop or similar</td><td>Xcode tools</td></tr>
+    </tbody>
+  </table>
+  <p>For local development, Valkey.app is the quickest start and the easiest way to run different Valkey
+    versions. Homebrew suits people who already manage their tools with <code>brew</code>. Docker is a good fit
+    if your project already runs in containers.</p>
+
+  <h2 id="valkey-app">1. Valkey.app (native macOS app)</h2>
+  <p><a href="/">Valkey.app</a> is a free, open-source Mac app for running Valkey servers, like Postgres.app
+    is for PostgreSQL. It needs no Homebrew, Docker or Terminal.</p>
+  <ol>
+    <li><a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download Valkey.dmg</a>
+      and drag Valkey.app into Applications.</li>
+    <li>Open it. The app isn't notarized yet, so allow it once:
+      <a href="/#install">step-by-step instructions</a>.</li>
+    <li>Click <strong>Create Server…</strong>, pick a Valkey version, and click <strong>Start</strong>.</li>
+  </ol>
+  <p>Each server gets its own port, version, data directory and live log. Use <strong>Connect…</strong> to open
+    <code>valkey-cli</code>, or add modules such as JSON and Bloom in Server Settings.</p>
+  <p><a class="button" href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download Valkey.app</a></p>
+
+  <h2 id="homebrew">2. Homebrew</h2>
+  <pre>brew install valkey
+brew services start valkey   # start now and at login</pre>
+  <p>Stop it with <code>brew services stop valkey</code>. Homebrew installs one Valkey version at a time and
+    upgrades it with <code>brew upgrade valkey</code>.</p>
+
+  <h2 id="docker">3. Docker</h2>
+  <pre>docker run -d --name valkey -p 6379:6379 valkey/valkey:latest</pre>
+  <p>Replace <code>latest</code> with a version tag such as <code>8.1</code> to pin a version. The
+    <code>valkey/valkey-bundle</code> image includes the official modules. Add
+    <code>-v valkey-data:/data</code> to keep your data when the container is removed.</p>
+
+  <h2 id="source">4. Build from source</h2>
+  <pre>xcode-select --install
+curl -LO https://github.com/valkey-io/valkey/archive/refs/tags/9.1.2.tar.gz
+tar xzf 9.1.2.tar.gz &amp;&amp; cd valkey-9.1.2
+make
+./src/valkey-server</pre>
+  <p>Building from source gives you full control, but you manage updates, configuration and startup yourself.</p>
+
+  <h2 id="connect">Check that Valkey is running</h2>
+  <pre>valkey-cli ping
+# PONG</pre>
+  <p>Valkey listens on port 6379 by default and speaks the Redis protocol, so <code>redis-cli</code>, Redis
+    client libraries and GUI tools that support Redis connect to it too.</p>
+
+  <footer>
+    <a href="/">Valkey.app</a> · <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> ·
+    Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
+  </footer>
+</main>
+</body>
+</html>

@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Valkey.app — Run Valkey on your Mac (free macOS app)</title>
-  <meta name="description" content="Free, native macOS app for running Valkey, the open-source Redis alternative, on your Mac: several servers, any version, JSON and Bloom modules, live logs.">
+  <title>Valkey for Mac — Run Valkey on macOS | Valkey.app</title>
+  <meta name="description" content="Valkey for Mac: a free, native macOS app to run Valkey, the open-source Redis alternative. Several servers, any version, JSON and Bloom modules, live logs.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://valkey.app/">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
 
   <!-- Link previews: Open Graph (Reddit, Slack, iMessage, LinkedIn…) and X/Twitter cards -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Valkey.app">
   <meta property="og:url" content="https://valkey.app/">
-  <meta property="og:title" content="Valkey.app — Run Valkey on your Mac">
+  <meta property="og:title" content="Valkey.app — Valkey for Mac">
   <meta property="og:description" content="A free, native macOS app for running Valkey servers locally: any version, modules, live logs and a menu-bar icon.">
   <meta property="og:image" content="https://valkey.app/og.jpg">
   <meta property="og:image:type" content="image/jpeg">
@@ -27,7 +29,7 @@
   <meta property="og:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Valkey.app — Run Valkey on your Mac">
+  <meta name="twitter:title" content="Valkey.app — Valkey for Mac">
   <meta name="twitter:description" content="A free, native macOS app for running Valkey servers locally: any version, modules, live logs and a menu-bar icon.">
   <meta name="twitter:image" content="https://valkey.app/og.jpg">
   <meta name="twitter:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
@@ -38,9 +40,17 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "WebSite",
+        "@id": "https://valkey.app/#website",
+        "name": "Valkey.app",
+        "alternateName": ["Valkey for Mac", "Valkey macOS app"],
+        "url": "https://valkey.app/"
+      },
+      {
         "@type": "SoftwareApplication",
         "@id": "https://valkey.app/#app",
         "name": "Valkey.app",
+        "alternateName": "Valkey for Mac",
         "url": "https://valkey.app/",
         "description": "A free, native macOS app for running Valkey, the open-source Redis alternative, locally: several servers side by side, any Valkey version, modules, live logs and a menu-bar icon.",
         "applicationCategory": "DeveloperApplication",
@@ -113,8 +123,8 @@
 <main>
   <header>
     <svg viewBox="0 0 60 60" role="img" aria-label="Valkey.app logo"><path d="M15.2,50l-9.4-5.9v-25L28.8,6l22.3,13.1v26.3l-22.7,12.8-7.9-4.9v-12l-4.3-2.7v-13.6l12.4-7.1,12.1,7.1v14.2l-9.6,5.4v-5.7c2.9-1.1,4.9-3.9,4.9-7.3s-3.4-7.8-7.6-7.8-7.6,3.5-7.6,7.8,2.1,6.2,4.9,7.3v10.9l2.7,1.7,16.8-9.5v-19.7l-16.6-9.8-17.1,9.8v18.5l3.6,2.3v6.8ZM28.5,28.1c1.9,0,3.4,1.6,3.4,3.6s-1.5,3.6-3.4,3.6-3.4-1.6-3.4-3.6,1.5-3.6,3.4-3.6Z"/></svg>
-    <h1>Valkey.app</h1>
-    <p class="lead">The easiest way to run <a href="https://valkey.io">Valkey</a> on your Mac.</p>
+    <h1>Valkey for Mac</h1>
+    <p class="lead"><strong>Valkey.app</strong> is the easiest way to run <a href="https://valkey.io">Valkey</a> on macOS.</p>
     <a class="button" href="https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg">Download for macOS</a>
     <p class="note">Free · macOS 13 or later · Apple Silicon and Intel · <a href="#install">install steps</a> ·
       <a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest">release notes</a></p>
@@ -123,7 +133,8 @@
   <p><strong>Valkey.app</strong> is a free, native macOS app for running <a href="https://valkey.io">Valkey</a>,
     the open-source Redis alternative, on your Mac. Like Postgres.app does for PostgreSQL, it runs local
     Valkey servers without Homebrew, Docker or a terminal: each server has its own port, Valkey version,
-    data directory and live log.</p>
+    data directory and live log. Comparing options? See <a href="/install-valkey-on-mac/">how to install
+    Valkey on Mac</a> with Valkey.app, Homebrew, Docker or from source.</p>
 
   <h2 id="install">Install</h2>
   <ol class="steps">
@@ -212,6 +223,7 @@
   </div>
 
   <footer>
+    <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
     <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
     Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
   </footer>
