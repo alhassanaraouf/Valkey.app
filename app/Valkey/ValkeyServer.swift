@@ -12,6 +12,30 @@ final class ValkeyServer: ObservableObject, Identifiable {
         var startAutomatically = false
         /// Names of modules to load ("json", "bloom", …). Optional so configs saved before modules decode.
         var modules: [String]?
+        /// Optional so configs saved before these settings decode; nil = Valkey's default.
+        var maxMemory: String?          // "256mb"; nil = no limit
+        var evictionPolicy: String?     // nil = noeviction
+        var persistence: Bool?          // nil = on
+        /// Password of the default user. Kept in the Keychain (see Secrets.swift), never in the saved JSON.
+        var password: String?
+        /// Extra ACL users; optional for old configs. Their passwords are in the Keychain too.
+        var users: [User]?
+
+        struct User: Codable, Equatable, Identifiable {
+            var id = UUID()
+            var name = ""
+            var readOnly = false
+            var password = ""
+            private enum CodingKeys: String, CodingKey { case id, name, readOnly }
+        }
+        private enum CodingKeys: String, CodingKey {
+            case id, name, version, port, dataDirectory, startAutomatically, modules, maxMemory, evictionPolicy, persistence, users
+        }
+
+        var accounts: [User] {
+            get { users ?? [] }
+            set { users = newValue.isEmpty ? nil : newValue }
+        }
 
         var enabledModules: [String] {
             get { modules ?? [] }
@@ -23,9 +47,17 @@ final class ValkeyServer: ObservableObject, Identifiable {
         .appendingPathComponent("Library/Application Support/Valkey", isDirectory: true)
     @Published var config: Config {
         didSet {
+            for gone in oldValue.accounts where !config.accounts.contains(where: { $0.id == gone.id }) {
+                Keychain.set(config.userAccount(gone), nil)
+            }
             onConfigChange?()
             if isRunning && (config.port != oldValue.port || config.version != oldValue.version
-                             || config.enabledModules != oldValue.enabledModules) { restart() }
+                             || config.enabledModules != oldValue.enabledModules
+                             || config.maxMemory != oldValue.maxMemory
+                             || config.evictionPolicy != oldValue.evictionPolicy
+                             || config.persistence != oldValue.persistence
+                             || config.password != oldValue.password
+                             || config.users != oldValue.users) { restart() }
         }
     }
     /// True while the process is alive (including while it shuts down).
@@ -116,9 +148,16 @@ final class ValkeyServer: ObservableObject, Identifiable {
         guard ensureDataDir() else { return }
         let p = Process()
         p.executableURL = server
+        // Credentials go in on stdin, not the command line, where other users could read them with ps.
+        let needsStdin = config.password != nil || !config.accounts.isEmpty
         // logfile "" = stdout, so startup errors (bad config, port in use) reach the log too.
-        p.arguments = [confURL.path, "--port", "\(config.port)", "--dir", dataDir.path,
+        p.arguments = [needsStdin ? "-" : confURL.path, "--port", "\(config.port)", "--dir", dataDir.path,
                        "--pidfile", pidURL.path, "--logfile", "", "--daemonize", "no"] + moduleArgs
+        if let m = config.maxMemory { p.arguments! += ["--maxmemory", m] }
+        if let e = config.evictionPolicy { p.arguments! += ["--maxmemory-policy", e] }
+        if config.persistence == false { p.arguments! += ["--appendonly", "no", "--save", ""] }
+        let stdin = Pipe()
+        if needsStdin { p.standardInput = stdin }
 
         let pipe = Pipe()
         p.standardOutput = pipe
@@ -142,6 +181,16 @@ final class ValkeyServer: ObservableObject, Identifiable {
 
         do {
             try p.run()
+            if needsStdin {
+                var conf = "include \(confQuote(confURL.path))\n"
+                if let pw = config.password { conf += "requirepass \(confQuote(pw))\n" }
+                for u in config.accounts {
+                    conf += "user \(confQuote(u.name)) on \(confQuote(">" + u.password)) ~* &* "
+                        + (u.readOnly ? "+@read +@connection +info\n" : "+@all\n")
+                }
+                stdin.fileHandleForWriting.write(Data(conf.utf8))
+                try? stdin.fileHandleForWriting.close()
+            }
             process = p
             isRunning = true
         } catch {
@@ -188,10 +237,12 @@ final class ValkeyServer: ObservableObject, Identifiable {
     func openCLI() {
         // A .command file runs in any terminal app without needing Apple Events permission.
         let script = dataDir.appendingPathComponent("valkey-cli.command")
-        let quoted = "'" + binary("valkey-cli").path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        func sq(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+        // The script holds the password, so it deletes itself as soon as it runs.
+        let auth = config.password.map { "export REDISCLI_AUTH=\(sq($0))\nrm -f \"$0\"\n" } ?? ""
         do {
-            try "#!/bin/sh\nexec \(quoted) -p \(config.port)\n".write(to: script, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+            try "#!/bin/sh\n\(auth)exec \(sq(binary("valkey-cli").path)) -p \(config.port)\n".write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: config.password == nil ? 0o755 : 0o700], ofItemAtPath: script.path)
         } catch {
             failure = "Couldn't open the CLI: \(error.localizedDescription)"
             return
@@ -202,5 +253,57 @@ final class ValkeyServer: ObservableObject, Identifiable {
     func showDataDir() {
         guard ensureDataDir() else { return }
         NSWorkspace.shared.open(dataDir)
+    }
+
+    /// valkey://[user:password@]127.0.0.1:port, for the default user or one of the ACL users.
+    func connectionURL(for user: Config.User? = nil) -> String {
+        let name = user?.name ?? "", password = user?.password ?? config.password
+        let allowed = CharacterSet.urlUserAllowed.subtracting(CharacterSet(charactersIn: ":@/"))
+        let auth = password.map {
+            "\(name.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""):"
+                + "\($0.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")@"
+        } ?? ""
+        return "valkey://\(auth)127.0.0.1:\(config.port)"
+    }
+
+    func copyConnectionURL(for user: Config.User? = nil) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(connectionURL(for: user), forType: .string)
+    }
+
+    struct Stats {
+        var memoryBytes = 0, clients = 0, ops = 0, keys = 0
+        var memory = ""
+        var hitRate: Int?   // percent; nil until there's been a lookup
+    }
+
+    /// Numbers from INFO; nil if the server doesn't answer.
+    func fetchStats() async -> Stats? {
+        let cli = binary("valkey-cli"), port = config.port, password = config.password
+        return await Task.detached {
+            let p = Process()
+            p.executableURL = cli
+            p.arguments = ["-p", "\(port)", "INFO"]
+            if let password { p.environment = ["REDISCLI_AUTH": password] }
+            let pipe = Pipe()
+            p.standardOutput = pipe
+            p.standardError = FileHandle.nullDevice
+            guard (try? p.run()) != nil else { return nil }
+            let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            p.waitUntilExit()
+            var info: [String: String] = [:]
+            var keys = 0
+            for line in out.split(whereSeparator: \.isNewline) {
+                let kv = line.split(separator: ":", maxSplits: 1)
+                guard kv.count == 2 else { continue }
+                info[String(kv[0])] = String(kv[1])
+                if kv[0].hasPrefix("db"), let n = kv[1].split(separator: ",").first?.split(separator: "=").last { keys += Int(n) ?? 0 }
+            }
+            guard let mem = info["used_memory_human"] else { return nil }
+            let hits = Int(info["keyspace_hits"] ?? "") ?? 0, misses = Int(info["keyspace_misses"] ?? "") ?? 0
+            return Stats(memoryBytes: Int(info["used_memory"] ?? "") ?? 0, clients: Int(info["connected_clients"] ?? "") ?? 0,
+                         ops: Int(info["instantaneous_ops_per_sec"] ?? "") ?? 0, keys: keys, memory: mem,
+                         hitRate: hits + misses > 0 ? hits * 100 / (hits + misses) : nil)
+        }.value
     }
 }

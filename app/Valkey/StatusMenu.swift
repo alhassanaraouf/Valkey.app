@@ -67,10 +67,29 @@ private struct ServerMenu: View {
             }
             .disabled(server.isStopping)
             Button("Connect…") { server.openCLI() }.disabled(!server.isRunning || server.isStopping)
+            CopyURLButton(server: server)
             Button("Show Data Directory") { server.showDataDir() }
         } label: {
             Label("\(server.config.name) — Port \(String(server.config.port))",
                   systemImage: server.isRunning ? "checkmark.circle.fill" : "circle")
+        }
+    }
+}
+
+/// Copies the connection URL; with ACL users it becomes a menu with one entry per user.
+struct CopyURLButton: View {
+    @ObservedObject var server: ValkeyServer
+
+    var body: some View {
+        if server.config.accounts.isEmpty {
+            Button("Copy URL") { server.copyConnectionURL() }
+        } else {
+            Menu("Copy URL") {
+                Button("Default user") { server.copyConnectionURL() }
+                ForEach(server.config.accounts) { user in
+                    Button(user.name) { server.copyConnectionURL(for: user) }
+                }
+            }
         }
     }
 }
