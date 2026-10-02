@@ -18,6 +18,7 @@ struct StatusMenu: View {
         .onAppear { MainWindow.open = { openWindow(id: "main") } }
         settingsItem
         CheckForUpdatesButton()
+        SendFeedbackButtons()
         Divider()
         // No ⌘Q hint: ⌘Q only closes to the menu bar, while this really quits.
         Button("Quit Valkey.app") { AppDelegate.quitCompletely() }
