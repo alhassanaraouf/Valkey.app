@@ -53,8 +53,8 @@ final class VersionStore: ObservableObject {
     /// Public half of the registry signing key; CI signs registry/registry.json with the private half.
     nonisolated static let releaseKey = "YbChZ7UV/onvaqksSqWct/VymACmimHwEoeo/yx5Tag="
     /// Override with `defaults write app.valkey.Valkey registryURL <url>` to test or self-host.
-    nonisolated static let defaultRegistryURL = URL(string: UserDefaults.standard.string(forKey: "registryURL")
-                                        ?? "https://valkey.app/registry.json")!
+    nonisolated static let defaultRegistryURL = UserDefaults.standard.string(forKey: "registryURL").flatMap(URL.init(string:))
+        ?? URL(string: "https://valkey.app/registry.json")!
 
     static let shared = VersionStore()
 

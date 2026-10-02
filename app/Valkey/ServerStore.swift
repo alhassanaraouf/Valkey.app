@@ -9,9 +9,16 @@ final class ServerStore: ObservableObject {
     private let defaultsKey = "servers"
 
     private init() {
-        let saved = UserDefaults.standard.data(forKey: defaultsKey)
-            .flatMap { try? JSONDecoder().decode([ValkeyServer.Config].self, from: $0) }
-        servers = (saved ?? []).map(makeServer)
+        let defaults = UserDefaults.standard
+        if let data = defaults.data(forKey: defaultsKey) {
+            do {
+                servers = try JSONDecoder().decode([ValkeyServer.Config].self, from: data).map(makeServer)
+            } catch {
+                // Don't let the next save() overwrite what we couldn't read.
+                NSLog("Valkey: couldn't read saved servers (\(error)); keeping a copy under \(defaultsKey).corrupt")
+                defaults.set(data, forKey: "\(defaultsKey).corrupt")
+            }
+        }
     }
 
     private func makeServer(_ config: ValkeyServer.Config) -> ValkeyServer {
@@ -21,7 +28,10 @@ final class ServerStore: ObservableObject {
     }
 
     private func save() {
-        let data = try? JSONEncoder().encode(servers.map(\.config))
+        // set(nil) would delete the saved list, so keep the old one if encoding fails.
+        guard let data = try? JSONEncoder().encode(servers.map(\.config)) else {
+            return NSLog("Valkey: couldn't encode servers; not saving")
+        }
         UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 
