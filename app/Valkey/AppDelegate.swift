@@ -76,6 +76,19 @@ struct SendFeedbackButtons: View {
     }
 }
 
+/// An error message in red with a nudge to report it; the message goes into the email.
+struct ErrorMessage: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(message).font(.callout).foregroundColor(.red)
+            Button("Report a Bug…") { Feedback.compose(.bug, error: message) }
+                .buttonStyle(.link).font(.callout)
+        }
+    }
+}
+
 /// Opens a pre-filled email. Feedback carries just the app and macOS version; a bug report adds each
 /// server's state and log tail. No paths or data are included, and the user reads it all before sending.
 @MainActor
@@ -83,16 +96,16 @@ enum Feedback {
     enum Kind { case feedback, bug }
     static let address = "alhassan@raoufs.me"
 
-    static func compose(_ kind: Kind) {
+    static func compose(_ kind: Kind, error: String? = nil) {
         var c = URLComponents()
         c.scheme = "mailto"
         c.path = address
         c.queryItems = [URLQueryItem(name: "subject", value: kind == .bug ? "Valkey.app bug report" : "Valkey.app feedback"),
-                        URLQueryItem(name: "body", value: body(kind))]
+                        URLQueryItem(name: "body", value: body(kind, error: error))]
         if let url = c.url { NSWorkspace.shared.open(url) }
     }
 
-    private static func body(_ kind: Kind) -> String {
+    private static func body(_ kind: Kind, error: String?) -> String {
         let info = Bundle.main.infoDictionary
         var u = utsname()
         uname(&u)
@@ -113,6 +126,7 @@ enum Feedback {
         }
         var text = """
         What happened?
+        \(error.map { "(The app showed: \($0))" } ?? "")
 
 
         What did you expect to happen?

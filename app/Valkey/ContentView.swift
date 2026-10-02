@@ -140,7 +140,7 @@ private struct ServerDetailView: View {
                         .font(.callout).foregroundColor(.secondary)
                     }
                     if let failure = server.failure {
-                        Text(failure).font(.callout).foregroundColor(.red)
+                        ErrorMessage(message: failure)
                     }
                 }
                 Spacer()

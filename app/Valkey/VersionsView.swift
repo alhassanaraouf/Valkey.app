@@ -34,7 +34,7 @@ struct VersionsView: View {
             }
 
             if let message = installError ?? versions.registryError {
-                Text(message).font(.callout).foregroundColor(.red)
+                ErrorMessage(message: message)
             }
             HStack {
                 Spacer()

@@ -154,7 +154,9 @@ struct ServerSettingsView: View {
                     ProgressView("Downloading the \(module.title) module…", value: fraction)
                 }
             }
-            if let message = installError ?? problem {
+            if let message = installError {
+                ErrorMessage(message: message)
+            } else if let message = problem {
                 Text(message).font(.callout).foregroundColor(.red)
             }
 
