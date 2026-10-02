@@ -126,6 +126,8 @@ struct ServerSettingsView: View {
                     }
                 }
                 Toggle("Start automatically when Valkey.app opens", isOn: $config.startAutomatically)
+                Toggle("Restart automatically if it crashes", isOn: Binding(
+                    get: { config.autoRestart ?? true }, set: { config.autoRestart = $0 ? nil : false }))
                 SecureField("Password", text: Binding(
                     get: { config.password ?? "" }, set: { config.password = $0.isEmpty ? nil : $0 }))
                 Toggle("Save data to disk", isOn: Binding(
