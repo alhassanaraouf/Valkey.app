@@ -5,12 +5,32 @@
         <link>https://valkey.app/appcast.xml</link>
         <description>Valkey.app updates</description>
         <item>
+            <title>Version 1.4.2</title>
+            <pubDate>Fri, 02 Oct 2026 13:06:15 +0000</pubDate>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.4.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- **Password and users.** **Server Settings** has a password for the default user and a **Users** list for extra accounts, each with its own password and full or read-only access. Passwords are kept in your Keychain, not in the saved server list, and are handed to the server privately rather than on its command line.
+- **Copy URL.** Copies `valkey://127.0.0.1:PORT` (with the password when one is set) from the server's window or its menu-bar menu. With extra users it offers one entry per user.
+- **Max memory and eviction policy.** Set a memory limit and what the server does when it's full.
+- **Save data to disk.** Turn it off for a cache-only server with no data files.
+- **Live stats.** A running server's window shows memory, operations per second, clients, keys and hit rate, with graphs of the last few minutes.
+- **Crash recovery.** A server that exits unexpectedly is restarted automatically and you get a notification. If it keeps failing (3 times in a minute) it's left stopped. Turn this off per server in **Server Settings**.
+- **Log filter.** Type in the **Filter** box above a server's log to show only matching lines.
+- **Edit valkey.conf.** The **Files** menu opens a server's config in your text editor. **Start** becomes **Restart** while the server runs, to apply changes.
+- **valkey-cli on your PATH.** **Settings → Command Line** links `valkey-cli` to the newest installed version and shows the line to add to your shell profile.
+]]></description>
+            <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.4.2/Valkey.app.zip" length="1938759" type="application/octet-stream" sparkle:edSignature="o0dfXMwGj+Av7khtk/61MQXsBdS6KtBox0bcaQWmZl29OelYk3wg9StNQfT5hHXslzTOXn9lnGtxwqXPiqAEDg=="/>
+        </item>
+        <item>
             <title>Version 1.4.1</title>
             <pubDate>Fri, 02 Oct 2026 12:22:23 +0000</pubDate>
             <sparkle:version>7</sparkle:version>
             <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## What's new
+            <description sparkle:format="markdown">## What's new
 
 - **Send feedback or report a bug by email.** **Send Feedback…** and **Report a Bug…** are in the Help menu and the menu-bar menu. Each opens a draft email you can read and edit before sending. A bug report includes your app, macOS and Valkey versions and each server's state and recent log lines, but no file paths.
 - **Report errors in one click.** Error messages (a server that won't start, a failed install or download) now have a **Report a Bug…** link that puts the error text into the email.
@@ -20,7 +40,7 @@
 - **A damaged saved server list no longer wipes your servers.** If Valkey.app can't read its saved list, it now keeps a copy instead of overwriting it with an empty one on the next change.
 - **Clearer errors when a server can't start.** If the data directory or its default config can't be created, or **Connect…** can't write its script, Valkey.app now says why instead of failing silently.
 - **A bad `registryURL` setting no longer crashes the app.** It falls back to the default registry.
-]]></description>
+</description>
             <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.4.1/Valkey.app.zip" length="1762726" type="application/octet-stream" sparkle:edSignature="9RhbEJEpIH6z34gTq96+bo5JoQIN7XPghuBVYehPxztFD8TZchsNmGvVClOmA4slVrBWKPd964Z1FdHGw3BdCg=="/>
         </item>
         <item>
