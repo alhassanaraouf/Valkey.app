@@ -55,16 +55,23 @@ final class ValkeyServer: ObservableObject, Identifiable {
         stopOrphanedServer()
     }
 
-    private func ensureDataDir() {
+    /// Creates the data directory, default config and log; sets `failure` and returns false if it can't.
+    private func ensureDataDir() -> Bool {
         let fm = FileManager.default
-        try? fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
-        if !fm.fileExists(atPath: confURL.path),
-           let def = Bundle.main.url(forResource: "valkey.conf.default", withExtension: nil) {
-            try? fm.copyItem(at: def, to: confURL)
+        do {
+            try fm.createDirectory(at: dataDir, withIntermediateDirectories: true)
+            if !fm.fileExists(atPath: confURL.path),
+               let def = Bundle.main.url(forResource: "valkey.conf.default", withExtension: nil) {
+                try fm.copyItem(at: def, to: confURL)
+            }
+        } catch {
+            failure = "Couldn't prepare the data directory \(dataDir.path): \(error.localizedDescription)"
+            return false
         }
         if !fm.fileExists(atPath: logURL.path) {
             fm.createFile(atPath: logURL.path, contents: nil)
         }
+        return true
     }
 
     private func loadLogTail() {
@@ -106,7 +113,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
             }
             moduleArgs += ["--loadmodule", VersionStore.shared.modulePath(module).path]
         }
-        ensureDataDir()
+        guard ensureDataDir() else { return }
         let p = Process()
         p.executableURL = server
         // logfile "" = stdout, so startup errors (bad config, port in use) reach the log too.
@@ -182,13 +189,18 @@ final class ValkeyServer: ObservableObject, Identifiable {
         // A .command file runs in any terminal app without needing Apple Events permission.
         let script = dataDir.appendingPathComponent("valkey-cli.command")
         let quoted = "'" + binary("valkey-cli").path.replacingOccurrences(of: "'", with: "'\\''") + "'"
-        try? "#!/bin/sh\nexec \(quoted) -p \(config.port)\n".write(to: script, atomically: true, encoding: .utf8)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        do {
+            try "#!/bin/sh\nexec \(quoted) -p \(config.port)\n".write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        } catch {
+            failure = "Couldn't open the CLI: \(error.localizedDescription)"
+            return
+        }
         TerminalApps.open(script)
     }
 
     func showDataDir() {
-        ensureDataDir()
+        guard ensureDataDir() else { return }
         NSWorkspace.shared.open(dataDir)
     }
 }
