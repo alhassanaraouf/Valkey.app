@@ -32,6 +32,7 @@ struct ValkeyApp: App {
         .defaultSize(width: 900, height: 600)
         .commands {
             CommandGroup(after: .appInfo) { CheckForUpdatesButton() }
+            CommandGroup(after: .help) { SendFeedbackButtons() }
             CommandGroup(after: .appTermination) { QuitCompletelyButton() }
         }
 
@@ -65,6 +66,98 @@ struct CheckForUpdatesButton: View {
     var body: some View {
         Button("Check for Updates…") { updater.checkForUpdates() }
             .disabled(!updater.canCheckForUpdates)
+    }
+}
+
+struct SendFeedbackButtons: View {
+    var body: some View {
+        Button("Send Feedback…") { Feedback.compose(.feedback) }
+        Button("Report a Bug…") { Feedback.compose(.bug) }
+    }
+}
+
+/// An error message in red with a nudge to report it; the message goes into the email.
+struct ErrorMessage: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(message).font(.callout).foregroundColor(.red)
+            Button("Report a Bug…") { Feedback.compose(.bug, error: message) }
+                .buttonStyle(.link).font(.callout)
+        }
+    }
+}
+
+/// Opens a pre-filled email. Feedback carries just the app and macOS version; a bug report adds each
+/// server's state and log tail. No paths or data are included, and the user reads it all before sending.
+@MainActor
+enum Feedback {
+    enum Kind { case feedback, bug }
+    static let address = "alhassan@raoufs.me"
+
+    static func compose(_ kind: Kind, error: String? = nil) {
+        var c = URLComponents()
+        c.scheme = "mailto"
+        c.path = address
+        c.queryItems = [URLQueryItem(name: "subject", value: kind == .bug ? "Valkey.app bug report" : "Valkey.app feedback"),
+                        URLQueryItem(name: "body", value: body(kind, error: error))]
+        if let url = c.url { NSWorkspace.shared.open(url) }
+    }
+
+    private static func body(_ kind: Kind, error: String?) -> String {
+        let info = Bundle.main.infoDictionary
+        var u = utsname()
+        uname(&u)
+        let arch = withUnsafeBytes(of: &u.machine) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
+        let system = """
+        Valkey.app \(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))
+        \(ProcessInfo.processInfo.operatingSystemVersionString), \(arch)
+        """
+        guard kind == .bug else {
+            return """
+            What do you like, what's missing, or what could be better?
+
+
+
+            ---- About your Mac ----
+            \(system)
+            """
+        }
+        var text = """
+        What happened?
+        \(error.map { "(The app showed: \($0))" } ?? "")
+
+
+        What did you expect to happen?
+
+
+        Steps to reproduce:
+        1.
+        2.
+        3.
+
+
+
+        ---- Diagnostics ----
+        \(system)
+        Installed versions: \(VersionStore.shared.installed.joined(separator: ", "))
+        Registry error: \(VersionStore.shared.registryError ?? "none")
+
+        """
+        for server in ServerStore.shared.servers {
+            let c = server.config
+            text += """
+
+            Server "\(c.name)": Valkey \(c.version), port \(c.port), modules [\(c.enabledModules.joined(separator: ", "))], \
+            \(server.isRunning ? "running" : "stopped"), auto-start \(c.startAutomatically)
+            Failure: \(server.failure ?? "none")
+            Log tail:
+            \(server.log.split(separator: "\n", omittingEmptySubsequences: false).suffix(15).joined(separator: "\n"))
+
+            """
+        }
+        return text
     }
 }
 
