@@ -5,12 +5,31 @@
         <link>https://valkey.app/appcast.xml</link>
         <description>Valkey.app updates</description>
         <item>
+            <title>Version 1.4.1</title>
+            <pubDate>Fri, 02 Oct 2026 12:22:23 +0000</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## What's new
+
+- **Send feedback or report a bug by email.** **Send Feedback…** and **Report a Bug…** are in the Help menu and the menu-bar menu. Each opens a draft email you can read and edit before sending. A bug report includes your app, macOS and Valkey versions and each server's state and recent log lines, but no file paths.
+- **Report errors in one click.** Error messages (a server that won't start, a failed install or download) now have a **Report a Bug…** link that puts the error text into the email.
+
+## Fixes
+
+- **A damaged saved server list no longer wipes your servers.** If Valkey.app can't read its saved list, it now keeps a copy instead of overwriting it with an empty one on the next change.
+- **Clearer errors when a server can't start.** If the data directory or its default config can't be created, or **Connect…** can't write its script, Valkey.app now says why instead of failing silently.
+- **A bad `registryURL` setting no longer crashes the app.** It falls back to the default registry.
+]]></description>
+            <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.4.1/Valkey.app.zip" length="1762726" type="application/octet-stream" sparkle:edSignature="9RhbEJEpIH6z34gTq96+bo5JoQIN7XPghuBVYehPxztFD8TZchsNmGvVClOmA4slVrBWKPd964Z1FdHGw3BdCg=="/>
+        </item>
+        <item>
             <title>Version 1.4</title>
             <pubDate>Sat, 26 Sep 2026 19:22:22 +0000</pubDate>
             <sparkle:version>6</sparkle:version>
             <sparkle:shortVersionString>1.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## What's new
+            <description sparkle:format="markdown">## What's new
 
 - **Modules.** Add official Valkey modules to any server: **JSON** (JSON documents with JSONPath queries) and **Bloom** (Bloom filters). Open **Server Settings → Modules → Add Module…**, search the catalog, and add what you need. Modules download when you save.
   - Each module build is tested against every Valkey version it's offered for, so you only see modules that work with your server's version.
@@ -20,7 +39,7 @@
 ## Fixes
 
 - **Logging out or restarting no longer gets blocked.** Quitting from the Dock, logout, restart and scripts now always quit Valkey.app and stop your servers gracefully. Before, with no Valkey window open, those quits could be cancelled. ⌘Q still closes Valkey to the menu bar while the menu-bar icon is shown.
-]]></description>
+</description>
             <enclosure url="https://github.com/alhassanaraouf/Valkey.app/releases/download/app-v1.4/Valkey.app.zip" length="1742216" type="application/octet-stream" sparkle:edSignature="ZajkOlHOMc8bo1wOBEGTjpmpyw/Rczhj+m6at+nuFIxDFqW8OnnU3FSlBmaDAtdeJiou06RSIVqDB/acobp9Cw=="/>
         </item>
         <item>
