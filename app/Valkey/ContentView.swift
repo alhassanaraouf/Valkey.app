@@ -121,6 +121,13 @@ private struct ServerDetailView: View {
     @ObservedObject var server: ValkeyServer
     let openSettings: () -> Void
     @State private var history: [ValkeyServer.Stats] = []
+    @State private var logFilter = ""
+
+    private var shownLog: String {
+        guard !logFilter.isEmpty else { return server.log }
+        return server.log.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { $0.localizedCaseInsensitiveContains(logFilter) }.joined(separator: "\n")
+    }
 
     private var statusText: String {
         server.isStopping ? "Stopping…" : server.isRunning ? "Running" : "Not running"
@@ -155,10 +162,15 @@ private struct ServerDetailView: View {
                     .disabled(!server.isRunning || server.isStopping)
                     .help("Open valkey-cli in Terminal")
                 CopyURLButton(server: server)
-                Button("Show in Finder") { server.showDataDir() }
+                Menu("Files") {
+                    Button("Edit valkey.conf") { server.openConfig() }
+                    Button("Show in Finder") { server.showDataDir() }
+                }
+                .help("Config changes apply when the server restarts")
                 Spacer()
                 Button("Stop") { server.stop() }.disabled(!server.isRunning || server.isStopping)
-                Button("Start") { server.start() }.disabled(server.isRunning)
+                Button(server.isRunning ? "Restart" : "Start") { server.isRunning ? server.restart() : server.start() }
+                    .disabled(server.isStopping)
             }
             .controlSize(.large)
             .padding(.top, 20)
@@ -172,12 +184,13 @@ private struct ServerDetailView: View {
             HStack {
                 Text("Log").font(.headline)
                 Spacer()
+                TextField("Filter", text: $logFilter).textFieldStyle(.roundedBorder).frame(width: 160)
                 Button("Open Log File") { NSWorkspace.shared.open(server.logURL) }
                     .buttonStyle(.link)
                     .disabled(!FileManager.default.fileExists(atPath: server.logURL.path))
             }
             .padding(.bottom, 8)
-            LogView(text: server.log)
+            LogView(text: shownLog, placeholder: logFilter.isEmpty ? "No log output yet." : "No matching lines.")
         }
         .padding(24)
         .task(id: server.isRunning) {
@@ -193,12 +206,13 @@ private struct ServerDetailView: View {
 
 private struct LogView: View {
     let text: String
+    let placeholder: String
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(text.isEmpty ? "No log output yet." : text)
+                    Text(text.isEmpty ? placeholder : text)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(text.isEmpty ? .secondary : .primary)
                         .textSelection(.enabled)

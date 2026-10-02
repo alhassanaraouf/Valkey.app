@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 
 /// One Valkey server: its saved configuration plus the running process and its log.
 @MainActor
@@ -16,6 +17,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
         var maxMemory: String?          // "256mb"; nil = no limit
         var evictionPolicy: String?     // nil = noeviction
         var persistence: Bool?          // nil = on
+        var autoRestart: Bool?          // restart after a crash; nil = on
         /// Password of the default user. Kept in the Keychain (see Secrets.swift), never in the saved JSON.
         var password: String?
         /// Extra ACL users; optional for old configs. Their passwords are in the Keychain too.
@@ -29,7 +31,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
             private enum CodingKeys: String, CodingKey { case id, name, readOnly }
         }
         private enum CodingKeys: String, CodingKey {
-            case id, name, version, port, dataDirectory, startAutomatically, modules, maxMemory, evictionPolicy, persistence, users
+            case id, name, version, port, dataDirectory, startAutomatically, modules, maxMemory, evictionPolicy, persistence, autoRestart, users
         }
 
         var accounts: [User] {
@@ -69,6 +71,8 @@ final class ValkeyServer: ObservableObject, Identifiable {
 
     private var process: Process?
     private var restartPending = false
+    private var pendingCrashRestart: DispatchWorkItem?
+    private var crashes: [Date] = []
     private var onStopped: [() -> Void] = []
 
     nonisolated let id: UUID
@@ -128,6 +132,8 @@ final class ValkeyServer: ObservableObject, Identifiable {
     }
 
     func start() {
+        pendingCrashRestart?.cancel()
+        pendingCrashRestart = nil
         guard process == nil else { return }
         failure = nil
         let server = binary("valkey-server")
@@ -200,6 +206,8 @@ final class ValkeyServer: ObservableObject, Identifiable {
 
     /// Sends SIGTERM (valkey saves and exits cleanly); `then` runs once the process has exited.
     func stop(then: (() -> Void)? = nil) {
+        pendingCrashRestart?.cancel()
+        pendingCrashRestart = nil
         guard let p = process else { then?(); return }
         if let then { onStopped.append(then) }
         guard !isStopping else { return }
@@ -214,7 +222,8 @@ final class ValkeyServer: ObservableObject, Identifiable {
     }
 
     private func didExit(status: Int32) {
-        if !isStopping { failure = "Exited unexpectedly (status \(status)). See the log for details." }
+        let crashed = !isStopping
+        if crashed { failure = "Exited unexpectedly (status \(status)). See the log for details." }
         process = nil
         isRunning = false
         isStopping = false
@@ -224,6 +233,28 @@ final class ValkeyServer: ObservableObject, Identifiable {
         if restartPending {
             restartPending = false
             start()
+        } else if crashed {
+            crashes = (crashes + [Date()]).filter { $0.timeIntervalSinceNow > -60 }
+            // A server that keeps dying (port taken, bad config) is left stopped after 3 tries in a minute.
+            let willRestart = config.autoRestart != false && crashes.count <= 3
+            notifyCrash(restarting: willRestart)
+            guard willRestart else { return }
+            failure = nil
+            appendLog("[Valkey.app] Exited unexpectedly (status \(status)); restarting…\n")
+            let work = DispatchWorkItem { [weak self] in self?.start() }
+            pendingCrashRestart = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: work)
+        }
+    }
+
+    private func notifyCrash(restarting: Bool) {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = "“\(config.name)” stopped unexpectedly"
+        content.body = restarting ? "Valkey.app is restarting it." : "It keeps failing, so it was left stopped. Check its log."
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            guard granted else { return }
+            center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         }
     }
 
@@ -248,6 +279,15 @@ final class ValkeyServer: ObservableObject, Identifiable {
             return
         }
         TerminalApps.open(script)
+    }
+
+    /// Opens valkey.conf in the default text editor; changes apply on the next restart.
+    func openConfig() {
+        guard ensureDataDir() else { return }
+        let open = Process()
+        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        open.arguments = ["-t", confURL.path]
+        try? open.run()
     }
 
     func showDataDir() {

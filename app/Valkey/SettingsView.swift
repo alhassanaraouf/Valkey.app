@@ -61,11 +61,33 @@ enum TerminalApps {
     }
 }
 
+/// A `valkey-cli` symlink in a folder the user can put on PATH; it points at the newest installed version.
+@MainActor enum CLITools {
+    static let dir = ValkeyServer.rootDir.appendingPathComponent("bin", isDirectory: true)
+    static let pathLine = #"export PATH="$HOME/Library/Application Support/Valkey/bin:$PATH""#
+    private static var link: URL { dir.appendingPathComponent("valkey-cli") }
+
+    static var status: String {
+        guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: link.path) else { return "Not installed" }
+        guard FileManager.default.isExecutableFile(atPath: target) else { return "Out of date: that version was removed" }
+        return "Linked to Valkey " + URL(fileURLWithPath: target).deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
+    }
+
+    static func install(version: String) throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? fm.removeItem(at: link)
+        try fm.createSymbolicLink(at: link, withDestinationURL: VersionStore.shared.binary("valkey-cli", version: version))
+    }
+}
+
 struct SettingsView: View {
     @AppStorage(SettingsKey.showMenuBarExtra) private var showMenuBarExtra = true
     @AppStorage(SettingsKey.terminalApp) private var terminalApp = TerminalApps.defaultID
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
+    @State private var cliStatus = CLITools.status
+    @State private var cliError: String?
     @ObservedObject private var updater = Updater.shared
     private let terminals = TerminalApps.installed
 
@@ -88,6 +110,32 @@ struct SettingsView: View {
                 }
             }
             Text("Used by Connect… to open valkey-cli.").font(.caption).foregroundColor(.secondary)
+
+            Section("Command Line") {
+                HStack {
+                    Text(cliStatus).foregroundColor(.secondary)
+                    Spacer()
+                    Button(cliStatus == "Not installed" ? "Install valkey-cli" : "Relink to Newest") {
+                        do {
+                            try CLITools.install(version: VersionStore.shared.installed.first ?? "")
+                            cliError = nil
+                        } catch { cliError = error.localizedDescription }
+                        cliStatus = CLITools.status
+                    }
+                    .disabled(VersionStore.shared.installed.isEmpty)
+                }
+                if let cliError { Text(cliError).font(.callout).foregroundColor(.red) }
+                Text("Then add this line to your shell profile (~/.zshrc) and open a new terminal:")
+                    .font(.caption).foregroundColor(.secondary)
+                HStack {
+                    Text(CLITools.pathLine).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                    Spacer()
+                    Button("Copy") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(CLITools.pathLine, forType: .string)
+                    }
+                }
+            }
 
             Section("Updates") {
                 Toggle("Check for updates automatically", isOn: Binding(
