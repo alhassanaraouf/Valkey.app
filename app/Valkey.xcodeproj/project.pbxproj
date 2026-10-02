@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		AA000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000011 /* AppDelegate.swift */; };
 		AA000002 /* ValkeyServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000012 /* ValkeyServer.swift */; };
+		AA000090 /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000091 /* Secrets.swift */; };
 		AA000003 /* StatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000013 /* StatusMenu.swift */; };
 		AA000004 /* ServerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000014 /* ServerSettingsView.swift */; };
 		AA000006 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000016 /* ContentView.swift */; };
@@ -26,6 +27,7 @@
 /* Begin PBXFileReference section */
 		AA000011 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA000012 /* ValkeyServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValkeyServer.swift; sourceTree = "<group>"; };
+		AA000091 /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		AA000013 /* StatusMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenu.swift; sourceTree = "<group>"; };
 		AA000014 /* ServerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSettingsView.swift; sourceTree = "<group>"; };
 		AA000016 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 				AA00001C /* Updater.swift */,
 				AA00001D /* ModulePickerView.swift */,
 				AA000013 /* StatusMenu.swift */,
+				AA000091 /* Secrets.swift */,
 				AA000014 /* ServerSettingsView.swift */,
 				AA000016 /* ContentView.swift */,
 				AA000025 /* Assets.xcassets */,
@@ -164,6 +167,7 @@
 				AA00000C /* Updater.swift in Sources */,
 				AA00000D /* ModulePickerView.swift in Sources */,
 				AA000003 /* StatusMenu.swift in Sources */,
+				AA000090 /* Secrets.swift in Sources */,
 				AA000004 /* ServerSettingsView.swift in Sources */,
 				AA000006 /* ContentView.swift in Sources */,
 			);

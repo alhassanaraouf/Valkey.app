@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct SheetRequest: Identifiable {
     let id = UUID()
@@ -119,6 +120,7 @@ private struct ServerRow: View {
 private struct ServerDetailView: View {
     @ObservedObject var server: ValkeyServer
     let openSettings: () -> Void
+    @State private var history: [ValkeyServer.Stats] = []
 
     private var statusText: String {
         server.isStopping ? "Stopping…" : server.isRunning ? "Running" : "Not running"
@@ -152,6 +154,7 @@ private struct ServerDetailView: View {
                 Button("Connect…") { server.openCLI() }
                     .disabled(!server.isRunning || server.isStopping)
                     .help("Open valkey-cli in Terminal")
+                CopyURLButton(server: server)
                 Button("Show in Finder") { server.showDataDir() }
                 Spacer()
                 Button("Stop") { server.stop() }.disabled(!server.isRunning || server.isStopping)
@@ -159,6 +162,10 @@ private struct ServerDetailView: View {
             }
             .controlSize(.large)
             .padding(.top, 20)
+
+            if let latest = history.last {
+                StatsView(latest: latest, history: history).padding(.top, 16)
+            }
 
             Divider().padding(.vertical, 16)
 
@@ -173,6 +180,14 @@ private struct ServerDetailView: View {
             LogView(text: server.log)
         }
         .padding(24)
+        .task(id: server.isRunning) {
+            history = []
+            while server.isRunning && !Task.isCancelled {
+                if let s = await server.fetchStats() { history = Array((history + [s]).suffix(60)) }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+            history = []
+        }
     }
 }
 
@@ -197,5 +212,42 @@ private struct LogView: View {
             .onAppear { proxy.scrollTo("end") }
             .onChange(of: text) { _ in proxy.scrollTo("end") }
         }
+    }
+}
+
+/// Tiles for the latest INFO numbers, with a sparkline for memory and ops/s over the last few minutes.
+private struct StatsView: View {
+    let latest: ValkeyServer.Stats
+    let history: [ValkeyServer.Stats]
+
+    var body: some View {
+        HStack(spacing: 10) {
+            tile("Memory", latest.memory, history.map(\.memoryBytes))
+            tile("Ops/s", "\(latest.ops)", history.map(\.ops))
+            tile("Clients", "\(latest.clients)")
+            tile("Keys", "\(latest.keys)")
+            tile("Hit rate", latest.hitRate.map { "\($0)%" } ?? "—")
+        }
+    }
+
+    private func tile(_ title: String, _ value: String, _ series: [Int]? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption).foregroundColor(.secondary)
+            Text(value).font(.title3.monospacedDigit())
+            if let series {
+                Chart(Array(series.enumerated()), id: \.offset) {
+                    LineMark(x: .value("Sample", $0.offset), y: .value(title, $0.element))
+                }
+                .chartXAxis(.hidden).chartYAxis(.hidden)
+                .chartYScale(domain: 0...(Swift.max(series.max() ?? 1, 1)))
+                .frame(height: 22)
+            } else {
+                Spacer().frame(height: 22)
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(6)
     }
 }
