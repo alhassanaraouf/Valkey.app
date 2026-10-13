@@ -1,0 +1,13 @@
+// valkey.app marketing site: static assets only (no Worker script).
+// _site is assembled by .github/workflows/deploy-website.yml.
+{
+  "name": "valkey-app-site",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./_site"
+  },
+  "routes": [
+    { "pattern": "valkey.app", "custom_domain": true },
+    { "pattern": "www.valkey.app", "custom_domain": true }
+  ]
+}
