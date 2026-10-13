@@ -1,0 +1,9 @@
+# Update feeds: keep caches short so new releases reach the app quickly.
+/appcast.xml
+  Cache-Control: public, max-age=300
+
+/registry.json
+  Cache-Control: public, max-age=300
+
+/registry.json.sig
+  Cache-Control: public, max-age=300

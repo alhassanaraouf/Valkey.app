@@ -81,6 +81,5 @@ jobs:
     needs: release
     permissions:
       contents: read
-      pages: write
-      id-token: write
     uses: ./.github/workflows/deploy-website.yml
+    secrets: inherit

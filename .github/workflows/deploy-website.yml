@@ -1,5 +1,6 @@
-# Publishes valkey.app on GitHub Pages: website/ plus registry/registry.json(.sig) at the site root.
-# Repo settings: Pages → Source "GitHub Actions", custom domain valkey.app.
+# Publishes valkey.app on Cloudflare (Workers static assets, see wrangler.jsonc):
+# website/ plus registry/registry.json(.sig) at the site root.
+# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. Callers must pass `secrets: inherit`.
 name: Deploy website
 
 on:
@@ -14,19 +15,14 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: website-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       # Always main: when called right after a registry commit, the triggering SHA predates it.
       - uses: actions/checkout@v5
@@ -42,9 +38,9 @@ jobs:
           python3 website/render.py registry/registry.json _site
           rm _site/render.py _site/og-image.svg
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: _site
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
