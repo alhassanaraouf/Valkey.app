@@ -1,6 +1,7 @@
-# Publishes valkey.app on Cloudflare (Workers static assets, see wrangler.jsonc):
-# website/ plus registry/registry.json(.sig) at the site root.
-# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. Callers must pass `secrets: inherit`.
+# valkey.app is deployed by Cloudflare Workers Builds (Git integration) on every push to main:
+#   build command: ./scripts/build-site.sh   deploy command: npx wrangler deploy   (config: wrangler.jsonc)
+# This workflow only checks that the site builds; it needs no Cloudflare secrets.
+# It is still called by publish-module, publish-valkey and release-app after registry commits.
 name: Deploy website
 
 on:
@@ -10,6 +11,8 @@ on:
       - website/**
       - registry/registry.json
       - registry/registry.json.sig
+      - scripts/build-site.sh
+      - wrangler.jsonc
   workflow_dispatch:
   workflow_call:
 
@@ -29,18 +32,9 @@ jobs:
         with:
           ref: main
 
-      - name: Assemble site
+      - name: Build site (check only; Cloudflare Workers Builds deploys)
         run: |
-          mkdir _site
-          cp -R website/. _site/
-          cp registry/registry.json registry/registry.json.sig _site/
-          # Versions, modules and FAQ answers as plain HTML (crawlers don't run JavaScript), plus sitemap.xml.
-          python3 website/render.py registry/registry.json _site
-          rm _site/render.py _site/og-image.svg
-
-      - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          ./scripts/build-site.sh
+          for f in index.html install-valkey-on-mac/index.html appcast.xml registry.json registry.json.sig sitemap.xml _headers; do
+            test -s "_site/$f" || { echo "missing _site/$f"; exit 1; }
+          done
