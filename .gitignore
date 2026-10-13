@@ -31,3 +31,4 @@ registry/valkey-src/valkey-*.tar.gz
 # Logs
 *.log
 registry/dist/
+_site/
