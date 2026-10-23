@@ -9,5 +9,11 @@
   "routes": [
     { "pattern": "valkey.app", "custom_domain": true },
     { "pattern": "www.valkey.app", "custom_domain": true }
-  ]
+  ],
+  // Keep on: every deploy re-applies these, and scripts/build-site.sh fails the build if they are removed.
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 1 }
+  }
 }
