@@ -1,0 +1,25 @@
+name: Bug report
+description: Something in Valkey.app doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: What you did, what you expected, what happened instead.}
+    validations: {required: true}
+  - type: input
+    id: app
+    attributes: {label: Valkey.app version, placeholder: "1.4.2 (Valkey → About)"}
+    validations: {required: true}
+  - type: input
+    id: macos
+    attributes: {label: macOS version and chip, placeholder: "macOS 15.1, Apple Silicon"}
+    validations: {required: true}
+  - type: input
+    id: valkey
+    attributes: {label: Valkey version of the server, placeholder: "9.0.1"}
+  - type: textarea
+    id: log
+    attributes:
+      label: Server log
+      description: The relevant lines from the server's log pane (~/Library/Application Support/Valkey/var-<port>/valkey.log). Remove any passwords.
+      render: text

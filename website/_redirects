@@ -1,0 +1,2 @@
+# Counted download link: the site's buttons point here, so download clicks show up in Cloudflare analytics.
+/download https://github.com/alhassanaraouf/Valkey.app/releases/latest/download/Valkey.dmg 302
