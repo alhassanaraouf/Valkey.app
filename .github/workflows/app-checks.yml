@@ -1,0 +1,20 @@
+# Builds the app and runs its standalone tests on pull requests that touch it. Needs no secrets.
+name: App checks
+
+on:
+  pull_request:
+    paths: [app/**, .github/workflows/app-checks.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Archive safety tests
+        run: app/scripts/test-archive-safety.sh
+      - name: Build (unsigned)
+        run: xcodebuild -project app/Valkey.xcodeproj -scheme Valkey -configuration Debug CODE_SIGNING_ALLOWED=NO build -quiet

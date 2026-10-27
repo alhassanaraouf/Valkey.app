@@ -298,19 +298,43 @@ final class VersionStore: ObservableObject {
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: staging) }
 
-        let tar = Process()
-        tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        tar.arguments = ["-xzf", file.path, "-C", staging.path]
-        try tar.run()
-        tar.waitUntilExit()
+        // List first and refuse absolute or `..` members, then extract without -P (bsdtar's safe mode),
+        // then check what landed: only files, folders and symlinks that stay inside the staging folder.
+        let listing = try runTar(["-tzf", file.path])
+        do {
+            try ArchiveSafety.validate(entries: listing.split(separator: "\n").map(String.init))
+        } catch {
+            throw InstallError("The download of \(label) contains an unsafe path (\(error)), so it was discarded.")
+        }
+        let extracted = (try? runTar(["-xzf", file.path, "-C", staging.path])) != nil
+        do {
+            try ArchiveSafety.validateTree(at: staging)
+        } catch {
+            throw InstallError("The download of \(label) contains an unsafe file (\(error)), so it was discarded.")
+        }
         let required = requiredExecutables.map { staging.appendingPathComponent($0).path }
-        guard tar.terminationStatus == 0, required.allSatisfy(fm.isExecutableFile(atPath:)) else {
+        guard extracted, required.allSatisfy(fm.isExecutableFile(atPath:)) else {
             throw InstallError("The download of \(label) is missing \(requiredExecutables.joined(separator: " and ")).")
         }
         if let manifest { try manifest.write(to: staging.appendingPathComponent("module.json")) }
 
         if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
         try fm.moveItem(at: staging, to: dest)
+    }
+
+    /// Runs /usr/bin/tar and returns its standard output; throws on a non-zero exit.
+    nonisolated private static func runTar(_ arguments: [String]) throws -> String {
+        let tar = Process()
+        tar.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        tar.arguments = arguments
+        let out = Pipe()
+        tar.standardOutput = out
+        tar.standardError = FileHandle.nullDevice
+        try tar.run()
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        tar.waitUntilExit()
+        guard tar.terminationStatus == 0 else { throw InstallError("tar exited with \(tar.terminationStatus)") }
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// Deletes an installed version. Callers make sure no server uses it.
