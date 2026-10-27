@@ -23,7 +23,7 @@ registry, so new Valkey releases don't need a new app release.
 
 ## Install
 
-Download `Valkey.app.zip` from Releases, drag to `/Applications`, launch.
+Download `Valkey.dmg` from [valkey.app](https://valkey.app) or [Releases](https://github.com/alhassanaraouf/Valkey.app/releases/latest), open it and drag **Valkey.app** to `/Applications`. It isn't notarized yet, so allow it once on first launch ([steps](https://valkey.app/#install)).
 
 ## Usage
 

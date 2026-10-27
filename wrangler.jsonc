@@ -10,6 +10,8 @@
     { "pattern": "valkey.app", "custom_domain": true },
     { "pattern": "www.valkey.app", "custom_domain": true }
   ],
+  // Required by `wrangler preview` (Workers Builds non-production branch deploys); empty is fine.
+  "previews": {},
   // Keep on: every deploy re-applies these, and scripts/build-site.sh fails the build if they are removed.
   "observability": {
     "enabled": true,
