@@ -17,7 +17,7 @@ enum CLI {
         guard let first = arguments.first else { return false }
         if (first as NSString).lastPathComponent == name { return true }
         guard arguments.count > 1 else { return false }
-        return commands.keys.contains { $0.split(separator: " ")[0] == arguments[1] } || ["help", "-h", "--help"].contains(arguments[1])
+        return specs.contains { $0.name.split(separator: " ")[0] == arguments[1] } || ["-h", "--help", "--version"].contains(arguments[1])
     }
 
     // MARK: Shapes shared with the app (the --json schema; see app/CLI.md)
@@ -58,163 +58,6 @@ enum CLI {
         var code: Int32 = failed
     }
 
-    // MARK: Arguments
-
-    static let settingOptions: Set<String> = [
-        "--name", "--port", "--version", "--auto-start", "--auto-restart", "--persistence", "--max-memory",
-        "--eviction-policy", "--password", "--modules", "--enable-module", "--disable-module",
-    ]
-    /// Command → number of positional arguments and accepted options. Two-word keys are subcommands.
-    static let commands: [String: (args: ClosedRange<Int>, options: Set<String>)] = [
-        "list": (0...0, ["--show-secrets"]),
-        "status": (0...1, ["--show-secrets"]),
-        "show": (1...1, ["--show-secrets"]),
-        "create": (0...1, settingOptions.union(["--data-dir"])),
-        "set": (1...1, settingOptions),
-        "start": (1...1, []),
-        "stop": (1...1, []),
-        "restart": (1...1, []),
-        "delete": (1...1, ["--yes"]),
-        "logs": (1...1, ["--lines", "--follow", "--filter"]),
-        "url": (1...1, ["--user", "--show-secrets"]),
-        "stats": (1...1, []),
-        "cli": (1...Int.max, []),
-        "connect": (1...1, []),
-        "open": (1...2, []),
-        "user add": (2...2, ["--password", "--read-only"]),
-        "user set": (2...2, ["--password", "--read-only", "--rename"]),
-        "user remove": (2...2, []),
-        "versions": (0...0, []),
-        "versions refresh": (0...0, []),
-        "versions install": (1...1, []),
-        "versions remove": (1...1, []),
-        "modules": (0...0, ["--valkey"]),
-        "modules install": (1...1, []),
-        "modules remove": (1...1, []),
-        "app": (0...0, []),
-        "app set": (0...0, ["--menu-bar", "--open-at-login", "--terminal", "--auto-update"]),
-        "app link-cli": (0...0, []),
-        "app check-updates": (0...0, []),
-        "app open": (0...0, []),
-        "app quit": (0...0, []),
-    ]
-    private static let flags: Set<String> = ["--follow", "--yes", "--show-secrets"]
-    private static let boolOptions: Set<String> = ["--auto-start", "--auto-restart", "--persistence", "--read-only",
-                                                   "--menu-bar", "--open-at-login", "--auto-update"]
-    private static let aliases = ["-n": "--lines", "-f": "--follow", "-y": "--yes"]
-
-    /// A parsed command line; also the request sent to the app.
-    struct Invocation: Codable, Equatable {
-        var command: String
-        var args: [String] = []
-        var options: [String: String] = [:]
-        var json = false
-    }
-
-    static let usage = """
-    Usage: \(name) <command> [arguments] [options] [--json]
-
-    Servers (<server> is a name, port or id):
-      list                              List servers with their settings and state
-      status [server] | show <server>   One server (or all) with every setting and its state
-      create [name] [settings] [--data-dir PATH]
-                                        Add a server (default: next free port, newest version;
-                                        downloads the version and modules if needed)
-      set <server> [settings]           Change settings (a running server restarts if needed)
-      start | stop | restart <server>   Wait until it accepts connections / has exited
-      delete <server> [--yes]           Remove a server (stops it; its data directory is kept)
-      logs <server> [-n N] [-f] [--filter TEXT]
-                                        Last N log lines (default 50); -f follows
-      stats <server>                    Memory, ops/s, clients, keys and hit rate (running servers)
-      url <server> [--user NAME]        Connection URL; the password is hidden without --show-secrets
-      cli <server> [valkey-cli args…]   Run the server's valkey-cli, authenticated (e.g. cli cache PING)
-      connect <server>                  Open valkey-cli in the terminal app chosen in Settings
-      open <server> [config|data|log]   Open valkey.conf, the data directory (default) or the log
-
-    Settings (for create and set):
-      --name NAME  --port N  --version V  --auto-start on|off  --auto-restart on|off
-      --persistence on|off  --max-memory SIZE|none  --eviction-policy POLICY
-      --password PW|-|""  (- reads it from stdin, "" removes it)
-      --modules a,b|none  --enable-module NAME  --disable-module NAME
-
-    ACL users:
-      user add <server> <name> --password PW|- [--read-only on|off]
-      user set <server> <name> [--password PW|-] [--read-only on|off] [--rename NAME]
-      user remove <server> <name>
-
-    Versions and modules:
-      versions                          Installed and available Valkey versions
-      versions refresh | install <V> | remove <V>
-      modules [--valkey V]              Module builds, installed and available
-      modules install <id> | remove <id>
-
-    App:
-      app                               App version, state and settings
-      app set [--menu-bar on|off] [--open-at-login on|off] [--terminal BUNDLE-ID] [--auto-update on|off]
-      app link-cli                      Link valkey-cli to the newest version (Settings › Command Line)
-      app check-updates | open | quit
-
-    --json prints the result as JSON (errors too, as {"error": …}); --show-secrets includes passwords.
-    Exit codes: 0 ok, 1 failed, 2 usage, 3 not found, 4 Valkey.app unreachable.
-    Valkey.app is launched in the background if it isn't running.
-    """
-
-    static func parse(_ arguments: [String]) throws -> Invocation {
-        var positional: [String] = [], options: [String: String] = [:], json = false
-        var rest = arguments[...]
-        while let arg = rest.popFirst() {
-            // Everything after `cli <server>` goes to valkey-cli untouched.
-            if positional.first == "cli" && positional.count >= 2 { positional.append(arg); continue }
-            if arg == "--json" { json = true; continue }
-            if arg == "-h" || arg == "--help" { return Invocation(command: "help") }
-            guard arg.hasPrefix("-"), arg.count > 1 else { positional.append(arg); continue }
-            let parts = arg.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
-            let key = aliases[parts[0]] ?? parts[0]
-            if flags.contains(key), parts.count == 1 {
-                options[key] = ""
-            } else if commands.values.contains(where: { $0.options.contains(key) }), !flags.contains(key) {
-                guard let value = parts.count == 2 ? parts[1] : rest.popFirst() else {
-                    throw Failure(message: "\(key) needs a value.", code: Failure.usage)
-                }
-                options[key] = value
-            } else {
-                throw Failure(message: "Unknown option \(arg).", code: Failure.usage)
-            }
-        }
-        guard let first = positional.first else { throw Failure(message: usage, code: Failure.usage) }
-        if first == "help" { return Invocation(command: "help") }
-        let two = positional.count >= 2 ? "\(first) \(positional[1])" : ""
-        let command = commands[two] != nil ? two : first
-        guard let spec = commands[command] else {
-            throw Failure(message: "Unknown command “\(positional.prefix(2).joined(separator: " "))”. Run `\(name) help`.",
-                          code: Failure.usage)
-        }
-        var args = Array(positional.dropFirst(command.split(separator: " ").count))
-        guard spec.args.contains(args.count) else {
-            throw Failure(message: args.count < spec.args.lowerBound ? "Missing arguments for \(command). Run `\(name) help`."
-                          : "Too many arguments for \(command).", code: Failure.usage)
-        }
-        if let bad = options.keys.sorted().first(where: { !spec.options.contains($0) }) {
-            throw Failure(message: "\(command) doesn't take \(bad).", code: Failure.usage)
-        }
-        for key in ["--port", "--lines"] {
-            if let v = options[key], Int(v).map({ $0 >= 0 }) != true {
-                throw Failure(message: "\(key) must be a number.", code: Failure.usage)
-            }
-        }
-        for key in boolOptions {
-            if let v = options[key], ConfigRules.bool(v) == nil {
-                throw Failure(message: "\(key) must be on or off.", code: Failure.usage)
-            }
-        }
-        if command == "create", let name = args.first {
-            if options["--name"] != nil { throw Failure(message: "Give the name once.", code: Failure.usage) }
-            options["--name"] = name
-            args = []
-        }
-        return Invocation(command: command, args: args, options: options, json: json)
-    }
-
     /// Finds a server by id, then port, then exact name, then case-insensitive name.
     static func resolve(_ query: String, in servers: [ServerInfo]) throws -> ServerInfo {
         let tries: [(ServerInfo) -> Bool] = [
@@ -239,9 +82,18 @@ enum CLI {
     static func run(_ arguments: [String]) -> Int32 {
         var json = arguments.prefix { $0 != "cli" }.contains("--json")
         do {
+            if arguments == ["--version"] || arguments == ["-V"] {
+                let plist = appBundle.flatMap { NSDictionary(contentsOf: $0.appendingPathComponent("Contents/Info.plist")) }
+                print("\(name) \(plist?["CFBundleShortVersionString"] as? String ?? "(not in an app bundle)")")
+                return 0
+            }
             var inv = try parse(arguments)
             json = inv.json
-            if inv.command == "help" { print(usage); return 0 }
+            if inv.command == "help" {
+                if json { printJSON(inv.args.isEmpty ? specs : specs.filter { $0.name == inv.args[0] }) }
+                else { print(inv.args.isEmpty ? overview : help(for: spec(inv.args[0])!)) }
+                return 0
+            }
             try prepare(&inv)
             try execute(inv)
             return 0

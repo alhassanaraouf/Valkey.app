@@ -26,6 +26,7 @@
 		AA0000B1 /* CLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B3 /* CLI.swift */; };
 		AA0000B2 /* CLIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B4 /* CLIServer.swift */; };
 		AA0000B5 /* ConfigRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B6 /* ConfigRules.swift */; };
+		AA0000B7 /* CLICommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B8 /* CLICommands.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,7 @@
 		AA0000B3 /* CLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLI.swift; sourceTree = "<group>"; };
 		AA0000B4 /* CLIServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIServer.swift; sourceTree = "<group>"; };
 		AA0000B6 /* ConfigRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigRules.swift; sourceTree = "<group>"; };
+		AA0000B8 /* CLICommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLICommands.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -65,6 +67,7 @@
 			children = (
 				AA000011 /* AppDelegate.swift */,
 				AA0000B3 /* CLI.swift */,
+				AA0000B8 /* CLICommands.swift */,
 				AA0000B4 /* CLIServer.swift */,
 				AA0000B6 /* ConfigRules.swift */,
 				AA000012 /* ValkeyServer.swift */,
@@ -172,6 +175,7 @@
 			files = (
 				AA000001 /* AppDelegate.swift in Sources */,
 				AA0000B1 /* CLI.swift in Sources */,
+				AA0000B7 /* CLICommands.swift in Sources */,
 				AA0000B2 /* CLIServer.swift in Sources */,
 				AA0000B5 /* ConfigRules.swift in Sources */,
 				AA000002 /* ValkeyServer.swift in Sources */,

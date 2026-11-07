@@ -37,8 +37,8 @@ check("app set", parsed(["app", "set", "--menu-bar", "off"]) == CLI.Invocation(c
 check("cli passes args through", parsed(["--json", "cli", "cache", "SET", "k", "--json", "-n", "1"])
       == CLI.Invocation(command: "cli", args: ["cache", "SET", "k", "--json", "-n", "1"], json: true))
 check("show secrets flag", parsed(["show", "cache", "--show-secrets"])?.options["--show-secrets"] != nil)
-check("help", parsed(["--help"])?.command == "help" && parsed(["help"])?.command == "help")
-check("no args is usage", code { try CLI.parse([]) } == CLI.Failure.usage)
+check("help", parsed(["--help"]) == CLI.Invocation(command: "help") && parsed(["help"]) == CLI.Invocation(command: "help"))
+check("no args shows help", parsed([]) == CLI.Invocation(command: "help"))
 check("unknown command", code { try CLI.parse(["frobnicate"]) } == CLI.Failure.usage)
 check("missing server", code { try CLI.parse(["start"]) } == CLI.Failure.usage)
 check("extra args", code { try CLI.parse(["start", "a", "b"]) } == CLI.Failure.usage)
@@ -48,7 +48,46 @@ check("option on wrong command", code { try CLI.parse(["start", "a", "-f"]) } ==
 check("missing value", code { try CLI.parse(["create", "--port"]) } == CLI.Failure.usage)
 check("bad port", code { try CLI.parse(["create", "--port", "abc"]) } == CLI.Failure.usage)
 check("negative lines", code { try CLI.parse(["logs", "a", "-n", "-3"]) } == CLI.Failure.usage)
-check("every command has usage text", CLI.commands.keys.allSatisfy { CLI.usage.contains($0.split(separator: " ").last!) })
+
+// Help
+check("help create", parsed(["help", "create"]) == CLI.Invocation(command: "help", args: ["create"]))
+check("create --help", parsed(["create", "cache", "--port", "1", "--help"]) == CLI.Invocation(command: "help", args: ["create"]))
+check("subcommand -h", parsed(["user", "add", "-h"]) == CLI.Invocation(command: "help", args: ["user add"]))
+check("cli --help is ours", parsed(["cli", "--help"]) == CLI.Invocation(command: "help", args: ["cli"]))
+check("cli <server> --help is valkey-cli's", parsed(["cli", "cache", "--help"]) == CLI.Invocation(command: "cli", args: ["cache", "--help"]))
+check("help --json", parsed(["help", "--json"]) == CLI.Invocation(command: "help", json: true))
+check("help for unknown command", code { try CLI.parse(["help", "nope"]) } == CLI.Failure.usage)
+check("did you mean a command", CLI.suggestion(for: "craete", in: CLI.specs.map(\.name)) == "create")
+func message(_ args: [String]) -> String {
+    do { _ = try CLI.parse(args); return "" } catch let f as CLI.Failure { return f.message } catch { return "" }
+}
+check("did you mean an option", message(["set", "a", "--prot", "1"]).contains("Did you mean --port?"))
+check("usage errors show the command's usage", message(["start"]).contains("Usage: valkey-app start <server>"))
+check("group alone lists subcommands", message(["user"]).contains("add, set, remove"))
+
+/// Minimal shell-word splitting for the examples: spaces, '…' and "…".
+func words(_ line: String) -> [String] {
+    var out: [String] = [], current = "", quote: Character?, started = false
+    for c in line {
+        if let q = quote { if c == q { quote = nil } else { current.append(c) }; continue }
+        if c == "'" || c == "\"" { quote = c; started = true; continue }
+        if c == " " { if started || !current.isEmpty { out.append(current) }; current = ""; started = false; continue }
+        current.append(c)
+    }
+    if started || !current.isEmpty { out.append(current) }
+    return out
+}
+for s in CLI.specs {
+    check("\(s.name): documented", !s.summary.isEmpty && !s.examples.isEmpty && s.args.allSatisfy { !$0.help.isEmpty }
+          && s.options.allSatisfy { !$0.help.isEmpty })
+    check("\(s.name): help shows every option", s.options.allSatisfy { CLI.help(for: s).contains($0.name) })
+    check("\(s.name): in the overview", CLI.overview.contains("  " + s.usage.dropFirst("valkey-app ".count).replacingOccurrences(of: " [options]", with: "")))
+    for e in s.examples where !e.command.contains("<") {
+        let argv = Array(words(e.command).dropFirst())
+        check("example parses: \(e.command)", (try? CLI.parse(argv))?.command == s.name)
+    }
+}
+check("help lines fit 100 columns", CLI.specs.allSatisfy { CLI.help(for: $0).split(separator: "\n").allSatisfy { $0.count <= 100 || !$0.contains(" ") } })
 
 // Resolving a server
 func server(_ name: String, _ port: Int, _ id: String) -> CLI.ServerInfo {

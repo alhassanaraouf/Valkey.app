@@ -11,8 +11,19 @@ the same `ServerStore` / `VersionStore` methods and the same checks (`ServerStor
 `ConfigRules`). If the app isn't running, the CLI starts it hidden. `valkey-app app` reports
 `"running": false` without starting it.
 
-Run `valkey-app help` for the full usage. Source: `Valkey/CLI.swift` (client) and `Valkey/CLIServer.swift`
-(app side). Tests: `scripts/test-cli.sh`.
+## Help
+
+- `valkey-app` or `valkey-app help` lists every command with a one-line summary.
+- `valkey-app help <command>`, or `valkey-app <command> --help`, shows the command's usage, arguments, every
+  option with a description, and examples, e.g. `valkey-app help create` or `valkey-app user add -h`.
+- `valkey-app help --json` prints the whole reference (commands, arguments, options, examples) as JSON, for agents.
+- `valkey-app --version` prints the app's version.
+- Mistakes get a usage line and a hint, e.g. `Unknown option --prot. Did you mean --port?`.
+
+Commands, options and help text are defined once, in `Valkey/CLICommands.swift`. Parsing and every help
+view come from that list, so adding a command or option there documents it. Source: `Valkey/CLI.swift`
+(client), `Valkey/CLICommands.swift` (commands, parsing, help) and `Valkey/CLIServer.swift` (app side).
+Tests: `scripts/test-cli.sh`; they check that every command and option is documented and that every example parses.
 
 ## Conventions
 
