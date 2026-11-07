@@ -76,6 +76,29 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
 
+  # Bumps the Homebrew cask in alhassanaraouf/homebrew-tap. Needs TAP_GITHUB_TOKEN: a fine-grained PAT
+  # with Contents read/write on that repo only.
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Update cask
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          [ -n "$TAP_TOKEN" ] || { echo "TAP_GITHUB_TOKEN is not set"; exit 1; }
+          SHA=$(curl -fsSL "https://github.com/$REPO/releases/download/app-v$VERSION/Valkey.dmg" | sha256sum | cut -d' ' -f1)
+          git clone "https://x-access-token:$TAP_TOKEN@github.com/alhassanaraouf/homebrew-tap.git" tap
+          cd tap
+          sed -i -E "s/^  version \".*\"/  version \"$VERSION\"/; s/^  sha256 \".*\"/  sha256 \"$SHA\"/" Casks/valkey.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "valkey $VERSION"
+          git push origin HEAD:main
+
   # Pushes made with GITHUB_TOKEN don't trigger other workflows, so deploy explicitly.
   deploy:
     needs: release
