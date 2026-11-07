@@ -67,6 +67,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
     @Published private(set) var isStopping = false
     @Published private(set) var failure: String?
     @Published private(set) var log = ""
+    var pid: Int32? { process?.processIdentifier }
     var onConfigChange: (() -> Void)?
 
     private var process: Process?

@@ -23,6 +23,8 @@
 		CC000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC000003 /* Sparkle */; };
 		AA00000C /* Updater.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001C /* Updater.swift */; };
 		AA00000D /* ModulePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00001D /* ModulePickerView.swift */; };
+		AA0000B1 /* CLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B3 /* CLI.swift */; };
+		AA0000B2 /* CLIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000B4 /* CLIServer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +45,8 @@
 		AA00001B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AA00001C /* Updater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Updater.swift; sourceTree = "<group>"; };
 		AA00001D /* ModulePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModulePickerView.swift; sourceTree = "<group>"; };
+		AA0000B3 /* CLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLI.swift; sourceTree = "<group>"; };
+		AA0000B4 /* CLIServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -58,6 +62,8 @@
 			isa = PBXGroup;
 			children = (
 				AA000011 /* AppDelegate.swift */,
+				AA0000B3 /* CLI.swift */,
+				AA0000B4 /* CLIServer.swift */,
 				AA000012 /* ValkeyServer.swift */,
 				AA000018 /* ServerStore.swift */,
 				AA0000A2 /* ArchiveSafety.swift */,
@@ -162,6 +168,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000001 /* AppDelegate.swift in Sources */,
+				AA0000B1 /* CLI.swift in Sources */,
+				AA0000B2 /* CLIServer.swift in Sources */,
 				AA000002 /* ValkeyServer.swift in Sources */,
 				AA000008 /* ServerStore.swift in Sources */,
 				AA0000A1 /* ArchiveSafety.swift in Sources */,
