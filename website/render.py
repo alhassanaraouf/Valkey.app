@@ -60,6 +60,7 @@ open(f"{site}/sitemap.xml", "w").write(f"""<?xml version="1.0" encoding="UTF-8"?
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://valkey.app/</loc><lastmod>{today}</lastmod></url>
   <url><loc>https://valkey.app/install-valkey-on-mac/</loc><lastmod>{today}</lastmod></url>
+  <url><loc>https://valkey.app/changelog/</loc><lastmod>{today}</lastmod></url>
 </urlset>
 """)
 print(f"rendered {len(versions)} versions, {len(modules)} modules")
