@@ -261,7 +261,7 @@ extension CLI {
     }
 
     static func help(for s: Spec) -> String {
-        var lines = ["\(name) \(s.name): \(s.summary)", "", "Usage: \(s.usage)"]
+        var lines = wrap(s.summary, indent: 2, first: "\(name) \(s.name): ") + ["", "Usage: \(s.usage)"]
         if let details = s.details { lines += [""] + wrap(details, indent: 0) }
         func rows(_ title: String, _ items: [(String, String)]) {
             guard !items.isEmpty else { return }
