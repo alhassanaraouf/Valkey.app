@@ -25,6 +25,15 @@ registry, so new Valkey releases don't need a new app release.
 
 Download `Valkey.dmg` from [valkey.app](https://valkey.app) or [Releases](https://github.com/alhassanaraouf/Valkey.app/releases/latest), open it and drag **Valkey.app** to `/Applications`. It isn't notarized yet, so allow it once on first launch ([steps](https://valkey.app/#install)).
 
+Or with [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask alhassanaraouf/tap/valkey
+xattr -dr com.apple.quarantine /Applications/Valkey.app   # allow it once; not notarized yet
+```
+
+The cask lives in [alhassanaraouf/homebrew-tap](https://github.com/alhassanaraouf/homebrew-tap).
+
 ## Usage
 
 - **Window** — sidebar lists servers (status, port, version); **+** / **−** add and remove servers,

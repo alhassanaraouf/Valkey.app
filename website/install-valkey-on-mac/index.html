@@ -116,6 +116,9 @@
       <a href="/#install">step-by-step instructions</a>.</li>
     <li>Click <strong>Create Server…</strong>, pick a Valkey version, and click <strong>Start</strong>.</li>
   </ol>
+  <p>Or install the app with Homebrew (this is the app, not the <code>valkey</code> server formula):</p>
+  <pre>brew install --cask alhassanaraouf/tap/valkey
+xattr -dr com.apple.quarantine /Applications/Valkey.app   # allow it once</pre>
   <p>Each server gets its own port, version, data directory and live log. Use <strong>Connect…</strong> to open
     <code>valkey-cli</code>, or add modules such as JSON and Bloom in Server Settings.</p>
   <p><a class="button" href="/download">Download Valkey.app</a></p>
