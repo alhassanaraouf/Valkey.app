@@ -155,14 +155,23 @@ struct SettingsView: View {
     }
 
     private func setOpenAtLogin(_ enabled: Bool) {
-        let service = SMAppService.mainApp
         do {
-            if enabled { try service.register() } else { try service.unregister() }
-            if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+            try LoginItem.set(enabled)
             loginError = nil
         } catch {
             loginError = error.localizedDescription
         }
-        openAtLogin = service.status == .enabled
+        openAtLogin = LoginItem.isEnabled
+    }
+}
+
+/// Open at login, shared by Settings and `valkey-app app set --open-at-login`.
+enum LoginItem {
+    static var isEnabled: Bool { SMAppService.mainApp.status == .enabled }
+
+    static func set(_ enabled: Bool) throws {
+        let service = SMAppService.mainApp
+        if enabled { try service.register() } else { try service.unregister() }
+        if service.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
     }
 }

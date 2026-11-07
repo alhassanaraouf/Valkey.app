@@ -27,26 +27,6 @@ struct ServerSettingsView: View {
         _portText = State(initialValue: String(request.config.port))
     }
 
-    private static let evictionPolicies = ["noeviction", "allkeys-lru", "allkeys-lfu", "allkeys-random",
-                                          "volatile-lru", "volatile-lfu", "volatile-random", "volatile-ttl"]
-
-    private var memoryProblem: String? {
-        guard let m = config.maxMemory,
-              m.range(of: #"^\d+([kmg]b?|b)?$"#, options: [.regularExpression, .caseInsensitive]) == nil else { return nil }
-        return "Max Memory must be a size like 256mb or 2gb."
-    }
-
-    private var usersProblem: String? {
-        var seen: Set<String> = ["default"]
-        for user in config.accounts {
-            if user.name.isEmpty || user.name.contains(where: { $0.isWhitespace || $0.isNewline }) {
-                return "User names can't be empty or contain spaces."
-            }
-            if !seen.insert(user.name).inserted { return "User “\(user.name)” is listed twice (or is “default”)." }
-            if user.password.isEmpty { return "Give user “\(user.name)” a password." }
-        }
-        return nil
-    }
 
     private var result: ValkeyServer.Config {
         var c = config
@@ -63,22 +43,7 @@ struct ServerSettingsView: View {
 
     private var isInstalling: Bool { saving || versions.progress[config.version] != nil }
 
-    /// Enabled modules without an installed build for the chosen version, with the build to install.
-    private var modulesToInstall: [VersionStore.ModuleEntry] {
-        config.enabledModules.compactMap { name in
-            versions.installedModule(name, for: config.version) == nil ? versions.availableModule(name, for: config.version) : nil
-        }
-    }
-
-    /// An enabled module the chosen version can't load.
-    private var moduleProblem: String? {
-        for name in config.enabledModules where versions.installedModule(name, for: config.version) == nil
-            && versions.availableModule(name, for: config.version) == nil {
-            let title = versions.knownModules.first { $0.name == name }?.title ?? name
-            return "The \(title) module isn't available for Valkey \(VersionStore.line(of: config.version))."
-        }
-        return nil
-    }
+    private var modulesToInstall: [VersionStore.ModuleEntry] { store.modulesToInstall(for: config) }
 
     private func label(for version: String) -> String {
         guard !versions.installed.contains(version) else { return "Valkey \(version)" }
@@ -104,7 +69,7 @@ struct ServerSettingsView: View {
     }
 
     var body: some View {
-        let problem = config.version.isEmpty ? "No versions available yet." : store.problem(with: result) ?? memoryProblem ?? usersProblem ?? moduleProblem
+        let problem = store.problem(with: result)
         VStack(alignment: .leading, spacing: 16) {
             Text(isNew ? "New Server" : "Server Settings").font(.headline)
             Form {
@@ -138,7 +103,7 @@ struct ServerSettingsView: View {
                 Picker("When Full", selection: Binding(
                     get: { config.evictionPolicy ?? "noeviction" },
                     set: { config.evictionPolicy = $0 == "noeviction" ? nil : $0 })) {
-                    ForEach(Self.evictionPolicies, id: \.self) { Text($0).tag($0) }
+                    ForEach(ConfigRules.evictionPolicies, id: \.self) { Text($0).tag($0) }
                 }
                 .disabled(config.maxMemory == nil)
                 LabeledContent("Users") {
@@ -251,11 +216,7 @@ struct ServerSettingsView: View {
         Task {
             defer { saving = false }
             do {
-                if !versions.installed.contains(result.version),
-                   let entry = versions.available.first(where: { $0.version == result.version }) {
-                    try await versions.install(entry)
-                }
-                for module in modulesToInstall { try await versions.install(module) }
+                try await store.installRequirements(for: result)
                 onSave(result)
                 dismiss()
             } catch {

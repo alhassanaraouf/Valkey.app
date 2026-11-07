@@ -64,9 +64,20 @@ final class ServerStore: ObservableObject {
         return path
     }
 
-    /// Why `config` can't be saved, or nil if it can.
+    /// Why `config` can't be saved, or nil if it can. Server Settings and the CLI both check this.
     func problem(with config: ValkeyServer.Config) -> String? {
+        let versions = VersionStore.shared
         let others = servers.map(\.config).filter { $0.id != config.id }
+        if config.version.isEmpty { return "No versions available yet." }
+        if let original = server(id: config.id)?.config.version, original != config.version {
+            // An existing server only moves to an installed version that isn't older.
+            guard versions.installed.contains(config.version) else { return "Valkey \(config.version) isn't installed." }
+            if VersionStore.isNewer(original, than: config.version) {
+                return "Valkey \(config.version) is older than \(original); older versions may not read its data files."
+            }
+        } else if !versions.allVersions.contains(config.version) {
+            return "Valkey \(config.version) isn't installed or available."
+        }
         if config.name.trimmingCharacters(in: .whitespaces).isEmpty { return "Enter a name." }
         guard (1...65535).contains(config.port) else { return "Port must be between 1 and 65535." }
         if let other = others.first(where: { $0.port == config.port }) {
@@ -75,7 +86,35 @@ final class ServerStore: ObservableObject {
         if let other = others.first(where: { $0.dataDirectory == config.dataDirectory }) {
             return "That data directory is already used by “\(other.name)”."
         }
+        if let problem = ConfigRules.maxMemoryProblem(config.maxMemory) { return problem }
+        if let policy = config.evictionPolicy, !ConfigRules.evictionPolicies.contains(policy) {
+            return "When Full must be one of: \(ConfigRules.evictionPolicies.joined(separator: ", "))."
+        }
+        if let problem = ConfigRules.usersProblem(config.accounts.map { ($0.name, $0.password) }) { return problem }
+        for name in config.enabledModules where versions.installedModule(name, for: config.version) == nil
+            && versions.availableModule(name, for: config.version) == nil {
+            let title = versions.knownModules.first { $0.name == name }?.title ?? name
+            return "The \(title) module isn't available for Valkey \(VersionStore.line(of: config.version))."
+        }
         return nil
+    }
+
+    /// Enabled modules without an installed build for the config's version, with the build to install.
+    func modulesToInstall(for config: ValkeyServer.Config) -> [VersionStore.ModuleEntry] {
+        let versions = VersionStore.shared
+        return config.enabledModules.compactMap { name in
+            versions.installedModule(name, for: config.version) == nil ? versions.availableModule(name, for: config.version) : nil
+        }
+    }
+
+    /// Downloads the config's version and modules if they aren't installed yet; run before saving it.
+    func installRequirements(for config: ValkeyServer.Config) async throws {
+        let versions = VersionStore.shared
+        if !versions.installed.contains(config.version),
+           let entry = versions.available.first(where: { $0.version == config.version }) {
+            try await versions.install(entry)
+        }
+        for module in modulesToInstall(for: config) { try await versions.install(module) }
     }
 
     func add(_ config: ValkeyServer.Config) {

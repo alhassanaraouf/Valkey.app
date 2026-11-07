@@ -3,9 +3,10 @@ import Foundation
 /// `valkey-app`, the command-line interface. It is the app's own executable run under that name
 /// (Homebrew links it as `valkey-app`), so it ships and updates with the app.
 ///
-/// The CLI never touches servers itself: it sends each request to the running app over a local
-/// CFMessagePort (see CLIServer.swift), launching the app in the background if needed, so the app
-/// stays the only owner of the server list and the server processes.
+/// The CLI never touches servers or settings itself: it sends each parsed command to the running app
+/// over a local CFMessagePort (see CLIServer.swift), launching the app in the background if needed,
+/// so the app stays the only owner of the server list, settings and server processes.
+/// Keep it at parity with the UI (see AGENTS.md and app/CLI.md).
 /// This file is Foundation-only so Tests/CLITests.swift can compile it standalone.
 enum CLI {
     static let portName = "app.valkey.Valkey.cli"
@@ -15,39 +16,39 @@ enum CLI {
     static func isInvocation(_ arguments: [String]) -> Bool {
         guard let first = arguments.first else { return false }
         if (first as NSString).lastPathComponent == name { return true }
-        return arguments.count > 1 && (commands[arguments[1]] != nil || ["help", "-h", "--help"].contains(arguments[1]))
+        guard arguments.count > 1 else { return false }
+        return commands.keys.contains { $0.split(separator: " ")[0] == arguments[1] } || ["help", "-h", "--help"].contains(arguments[1])
     }
 
-    // MARK: Messages between the CLI and the app
-
-    struct Request: Codable, Equatable {
-        var command: String
-        var server: String?
-        var name: String?
-        var port: Int?
-        var version: String?
-        var user: String?
-    }
+    // MARK: Shapes shared with the app (the --json schema; see app/CLI.md)
 
     struct ServerInfo: Codable, Equatable {
+        struct User: Codable, Equatable { var name: String; var readOnly: Bool; var password: String? }
+        struct Module: Codable, Equatable {
+            var name: String
+            var title: String
+            var status: String      // installed, will-download, unavailable
+            var version: String?
+        }
         var id: String
         var name: String
         var version: String
         var port: Int
-        var state: String       // running, stopping, stopped, failed
+        var state: String           // running, stopping, stopped, failed
         var pid: Int32?
         var failure: String?
-        var modules: [String]
         var startAutomatically: Bool
+        var autoRestart: Bool
+        var persistence: Bool
+        var maxMemory: String?
+        var evictionPolicy: String
+        var hasPassword: Bool
+        var password: String?       // only with --show-secrets
+        var users: [User]
+        var modules: [Module]
         var dataDirectory: String
+        var configFile: String
         var logFile: String
-    }
-
-    struct Response: Codable {
-        var error: String?
-        var exitCode: Int32?
-        var servers: [ServerInfo]?
-        var url: String?
     }
 
     /// An error with the exit code to leave with.
@@ -59,45 +60,102 @@ enum CLI {
 
     // MARK: Arguments
 
-    enum Target { case none, optional, required }
-    static let commands: [String: (target: Target, options: Set<String>)] = [
-        "list": (.none, []),
-        "status": (.optional, []),
-        "create": (.optional, ["--port", "--version"]),
-        "start": (.required, []),
-        "stop": (.required, []),
-        "restart": (.required, []),
-        "delete": (.required, ["--yes"]),
-        "logs": (.required, ["--lines", "--follow"]),
-        "url": (.required, ["--user"]),
+    static let settingOptions: Set<String> = [
+        "--name", "--port", "--version", "--auto-start", "--auto-restart", "--persistence", "--max-memory",
+        "--eviction-policy", "--password", "--modules", "--enable-module", "--disable-module",
     ]
-    private static let valueOptions: Set<String> = ["--port", "--version", "--lines", "--user"]
+    /// Command → number of positional arguments and accepted options. Two-word keys are subcommands.
+    static let commands: [String: (args: ClosedRange<Int>, options: Set<String>)] = [
+        "list": (0...0, ["--show-secrets"]),
+        "status": (0...1, ["--show-secrets"]),
+        "show": (1...1, ["--show-secrets"]),
+        "create": (0...1, settingOptions.union(["--data-dir"])),
+        "set": (1...1, settingOptions),
+        "start": (1...1, []),
+        "stop": (1...1, []),
+        "restart": (1...1, []),
+        "delete": (1...1, ["--yes"]),
+        "logs": (1...1, ["--lines", "--follow", "--filter"]),
+        "url": (1...1, ["--user", "--show-secrets"]),
+        "stats": (1...1, []),
+        "cli": (1...Int.max, []),
+        "connect": (1...1, []),
+        "open": (1...2, []),
+        "user add": (2...2, ["--password", "--read-only"]),
+        "user set": (2...2, ["--password", "--read-only", "--rename"]),
+        "user remove": (2...2, []),
+        "versions": (0...0, []),
+        "versions refresh": (0...0, []),
+        "versions install": (1...1, []),
+        "versions remove": (1...1, []),
+        "modules": (0...0, ["--valkey"]),
+        "modules install": (1...1, []),
+        "modules remove": (1...1, []),
+        "app": (0...0, []),
+        "app set": (0...0, ["--menu-bar", "--open-at-login", "--terminal", "--auto-update"]),
+        "app link-cli": (0...0, []),
+        "app check-updates": (0...0, []),
+        "app open": (0...0, []),
+        "app quit": (0...0, []),
+    ]
+    private static let flags: Set<String> = ["--follow", "--yes", "--show-secrets"]
+    private static let boolOptions: Set<String> = ["--auto-start", "--auto-restart", "--persistence", "--read-only",
+                                                   "--menu-bar", "--open-at-login", "--auto-update"]
     private static let aliases = ["-n": "--lines", "-f": "--follow", "-y": "--yes"]
 
-    struct Invocation: Equatable {
+    /// A parsed command line; also the request sent to the app.
+    struct Invocation: Codable, Equatable {
         var command: String
-        var target: String?
+        var args: [String] = []
         var options: [String: String] = [:]
         var json = false
     }
 
     static let usage = """
-    Usage: \(name) <command> [server] [options] [--json]
+    Usage: \(name) <command> [arguments] [options] [--json]
 
-    Commands:
-      list                          List servers
-      status [server]               Show one server, or all
-      create [name] [--port N] [--version V]
-                                    Add a server (default: next free port, newest installed version)
-      start <server>                Start and wait until it accepts connections
-      stop <server>                 Stop and wait until it has exited
-      restart <server>              Restart and wait until it accepts connections
-      delete <server> [--yes]       Remove a server (stops it; its data directory is kept)
-      logs <server> [-n N] [-f]     Print the last N log lines (default 50); -f follows
-      url <server> [--user NAME]    Print the connection URL (includes the password, if set)
+    Servers (<server> is a name, port or id):
+      list                              List servers with their settings and state
+      status [server] | show <server>   One server (or all) with every setting and its state
+      create [name] [settings] [--data-dir PATH]
+                                        Add a server (default: next free port, newest version;
+                                        downloads the version and modules if needed)
+      set <server> [settings]           Change settings (a running server restarts if needed)
+      start | stop | restart <server>   Wait until it accepts connections / has exited
+      delete <server> [--yes]           Remove a server (stops it; its data directory is kept)
+      logs <server> [-n N] [-f] [--filter TEXT]
+                                        Last N log lines (default 50); -f follows
+      stats <server>                    Memory, ops/s, clients, keys and hit rate (running servers)
+      url <server> [--user NAME]        Connection URL; the password is hidden without --show-secrets
+      cli <server> [valkey-cli args…]   Run the server's valkey-cli, authenticated (e.g. cli cache PING)
+      connect <server>                  Open valkey-cli in the terminal app chosen in Settings
+      open <server> [config|data|log]   Open valkey.conf, the data directory (default) or the log
 
-    <server> is a name, port or id. --json prints JSON (errors too, as {"error": …}).
-    Exit codes: 0 ok, 1 failed, 2 usage, 3 server not found, 4 Valkey.app unreachable.
+    Settings (for create and set):
+      --name NAME  --port N  --version V  --auto-start on|off  --auto-restart on|off
+      --persistence on|off  --max-memory SIZE|none  --eviction-policy POLICY
+      --password PW|-|""  (- reads it from stdin, "" removes it)
+      --modules a,b|none  --enable-module NAME  --disable-module NAME
+
+    ACL users:
+      user add <server> <name> --password PW|- [--read-only on|off]
+      user set <server> <name> [--password PW|-] [--read-only on|off] [--rename NAME]
+      user remove <server> <name>
+
+    Versions and modules:
+      versions                          Installed and available Valkey versions
+      versions refresh | install <V> | remove <V>
+      modules [--valkey V]              Module builds, installed and available
+      modules install <id> | remove <id>
+
+    App:
+      app                               App version, state and settings
+      app set [--menu-bar on|off] [--open-at-login on|off] [--terminal BUNDLE-ID] [--auto-update on|off]
+      app link-cli                      Link valkey-cli to the newest version (Settings › Command Line)
+      app check-updates | open | quit
+
+    --json prints the result as JSON (errors too, as {"error": …}); --show-secrets includes passwords.
+    Exit codes: 0 ok, 1 failed, 2 usage, 3 not found, 4 Valkey.app unreachable.
     Valkey.app is launched in the background if it isn't running.
     """
 
@@ -105,33 +163,36 @@ enum CLI {
         var positional: [String] = [], options: [String: String] = [:], json = false
         var rest = arguments[...]
         while let arg = rest.popFirst() {
+            // Everything after `cli <server>` goes to valkey-cli untouched.
+            if positional.first == "cli" && positional.count >= 2 { positional.append(arg); continue }
             if arg == "--json" { json = true; continue }
             if arg == "-h" || arg == "--help" { return Invocation(command: "help") }
             guard arg.hasPrefix("-"), arg.count > 1 else { positional.append(arg); continue }
-            let parts = arg.split(separator: "=", maxSplits: 1).map(String.init)
+            let parts = arg.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
             let key = aliases[parts[0]] ?? parts[0]
-            if valueOptions.contains(key) {
+            if flags.contains(key), parts.count == 1 {
+                options[key] = ""
+            } else if commands.values.contains(where: { $0.options.contains(key) }), !flags.contains(key) {
                 guard let value = parts.count == 2 ? parts[1] : rest.popFirst() else {
                     throw Failure(message: "\(key) needs a value.", code: Failure.usage)
                 }
                 options[key] = value
-            } else if parts.count == 1, aliases.values.contains(key) {
-                options[key] = ""
             } else {
                 throw Failure(message: "Unknown option \(arg).", code: Failure.usage)
             }
         }
-        guard let command = positional.first else { throw Failure(message: usage, code: Failure.usage) }
-        if command == "help" { return Invocation(command: "help") }
+        guard let first = positional.first else { throw Failure(message: usage, code: Failure.usage) }
+        if first == "help" { return Invocation(command: "help") }
+        let two = positional.count >= 2 ? "\(first) \(positional[1])" : ""
+        let command = commands[two] != nil ? two : first
         guard let spec = commands[command] else {
-            throw Failure(message: "Unknown command “\(command)”. Run `\(name) help`.", code: Failure.usage)
+            throw Failure(message: "Unknown command “\(positional.prefix(2).joined(separator: " "))”. Run `\(name) help`.",
+                          code: Failure.usage)
         }
-        let targets = positional.dropFirst()
-        if targets.count > 1 || (spec.target == .none && !targets.isEmpty) {
-            throw Failure(message: "Too many arguments for \(command).", code: Failure.usage)
-        }
-        if spec.target == .required && targets.isEmpty {
-            throw Failure(message: "\(command) needs a server (name, port or id).", code: Failure.usage)
+        var args = Array(positional.dropFirst(command.split(separator: " ").count))
+        guard spec.args.contains(args.count) else {
+            throw Failure(message: args.count < spec.args.lowerBound ? "Missing arguments for \(command). Run `\(name) help`."
+                          : "Too many arguments for \(command).", code: Failure.usage)
         }
         if let bad = options.keys.sorted().first(where: { !spec.options.contains($0) }) {
             throw Failure(message: "\(command) doesn't take \(bad).", code: Failure.usage)
@@ -141,7 +202,17 @@ enum CLI {
                 throw Failure(message: "\(key) must be a number.", code: Failure.usage)
             }
         }
-        return Invocation(command: command, target: targets.first, options: options, json: json)
+        for key in boolOptions {
+            if let v = options[key], ConfigRules.bool(v) == nil {
+                throw Failure(message: "\(key) must be on or off.", code: Failure.usage)
+            }
+        }
+        if command == "create", let name = args.first {
+            if options["--name"] != nil { throw Failure(message: "Give the name once.", code: Failure.usage) }
+            options["--name"] = name
+            args = []
+        }
+        return Invocation(command: command, args: args, options: options, json: json)
     }
 
     /// Finds a server by id, then port, then exact name, then case-insensitive name.
@@ -166,10 +237,12 @@ enum CLI {
     // MARK: Running a command
 
     static func run(_ arguments: [String]) -> Int32 {
-        let json = arguments.contains("--json")
+        var json = arguments.prefix { $0 != "cli" }.contains("--json")
         do {
-            let inv = try parse(arguments)
+            var inv = try parse(arguments)
+            json = inv.json
             if inv.command == "help" { print(usage); return 0 }
+            try prepare(&inv)
             try execute(inv)
             return 0
         } catch let failure as Failure {
@@ -185,72 +258,94 @@ enum CLI {
         }
     }
 
-    private static func execute(_ inv: Invocation) throws {
-        func one(_ request: Request) throws -> ServerInfo {
-            guard let server = try send(request).servers?.first else { throw Failure(message: "Valkey.app sent no server.") }
-            return server
+    /// Resolves what only the CLI knows: passwords from stdin and paths relative to its directory.
+    private static func prepare(_ inv: inout Invocation) throws {
+        if inv.options["--password"] == "-" {
+            var text = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+            while text.hasSuffix("\n") || text.hasSuffix("\r") { text.removeLast() }
+            inv.options["--password"] = text
         }
+        if let dir = inv.options["--data-dir"] {
+            let path = (dir as NSString).expandingTildeInPath
+            inv.options["--data-dir"] = URL(fileURLWithPath: path, relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+                .standardizedFileURL.path
+        }
+    }
+
+    private static func execute(_ inv: Invocation) throws {
         switch inv.command {
-        case "list":
-            output(inv, try send(Request(command: "list")).servers ?? [])
-        case "status":
-            if let target = inv.target {
-                output(inv, try one(Request(command: "status", server: target)))
-            } else {
-                output(inv, try send(Request(command: "list")).servers ?? [])
-            }
-        case "create":
-            let server = try one(Request(command: "create", name: inv.target, port: inv.options["--port"].flatMap { Int($0) },
-                                         version: inv.options["--version"]))
-            output(inv, server, "Created “\(server.name)” on port \(server.port) (Valkey \(server.version)).")
         case "start", "restart":
-            let before = try one(Request(command: "status", server: inv.target))
+            let before = try server(inv.args[0])
             if before.state == "stopped" || before.state == "failed", portAcceptsConnections(before.port) {
                 throw Failure(message: "Port \(before.port) is already in use by another process.")
             }
             if inv.command == "start", before.state == "running" {
-                return output(inv, before, "“\(before.name)” is already running on port \(before.port).")
+                return output(inv, ["result": encodeJSON(before), "message": "“\(before.name)” is already running on port \(before.port)."])
             }
-            _ = try one(Request(command: inv.command, server: before.id))
-            let server = try wait(for: before.id, timeout: 15, what: "start accepting connections") {
+            _ = try request(Invocation(command: inv.command, args: [before.id]))
+            let after = try wait(for: before.id, timeout: 15, what: "start accepting connections") {
                 if $0.state == "failed" { throw Failure(message: "“\($0.name)” failed to start: \($0.failure ?? "see its log").") }
                 return $0.state == "running" && $0.pid != before.pid && portAcceptsConnections($0.port)
             }
-            output(inv, server, "“\(server.name)” is running on port \(server.port).")
+            output(inv, ["result": encodeJSON(after), "message": "“\(after.name)” is running on port \(after.port)."])
         case "stop":
-            let stopping = try one(Request(command: "stop", server: inv.target))
-            let server = try wait(for: stopping.id, timeout: 30, what: "stop") { $0.state == "stopped" || $0.state == "failed" }
-            output(inv, server, "“\(server.name)” stopped.")
+            let target = try server(inv.args[0])
+            _ = try request(Invocation(command: "stop", args: [target.id]))
+            let after = try wait(for: target.id, timeout: 30, what: "stop") { $0.state == "stopped" || $0.state == "failed" }
+            output(inv, ["result": encodeJSON(after), "message": "“\(after.name)” stopped."])
         case "delete":
-            let server = try one(Request(command: "status", server: inv.target))
+            let target = try server(inv.args[0])
             if inv.options["--yes"] == nil {
                 guard isatty(STDIN_FILENO) != 0 else {
                     throw Failure(message: "delete needs --yes when not run interactively.", code: Failure.usage)
                 }
-                print("Remove “\(server.name)” (port \(server.port))? Its data directory is kept. [y/N] ", terminator: "")
+                print("Remove “\(target.name)” (port \(target.port))? Its data directory is kept. [y/N] ", terminator: "")
                 guard readLine()?.lowercased().hasPrefix("y") == true else { throw Failure(message: "Cancelled.") }
             }
-            _ = try one(Request(command: "delete", server: server.id))
-            output(inv, server, "Removed “\(server.name)”. Its data directory is kept at \(server.dataDirectory).")
-        case "url":
-            let url = try send(Request(command: "url", server: inv.target, user: inv.options["--user"])).url ?? ""
-            inv.json ? printJSON(["url": url]) : print(url)
+            output(inv, try request(Invocation(command: "delete", args: [target.id])))
         case "logs":
-            let server = try one(Request(command: "status", server: inv.target))
-            try logs(server, lines: Int(inv.options["--lines"] ?? "50") ?? 50, follow: inv.options["--follow"] != nil, json: inv.json)
+            try logs(try server(inv.args[0]), lines: Int(inv.options["--lines"] ?? "50") ?? 50,
+                     follow: inv.options["--follow"] != nil, filter: inv.options["--filter"] ?? "", json: inv.json)
+        case "cli":
+            let info = try request(Invocation(command: "cli-info", args: [inv.args[0]]))["result"] as? [String: Any] ?? [:]
+            guard let path = info["path"] as? String, let port = info["port"] as? Int else { throw Failure(message: "Valkey.app sent no valkey-cli.") }
+            if let password = info["password"] as? String { setenv("REDISCLI_AUTH", password, 1) }
+            let argv = [path, "-p", "\(port)"] + inv.args.dropFirst()
+            var cargs = argv.map { strdup($0) } + [nil]
+            execv(path, &cargs)
+            throw Failure(message: "Couldn't run \(path): \(String(cString: strerror(errno))).")
+        case "app" where remotePort() == nil:
+            // Report without launching the app, so agents can check whether it's running.
+            let plist = NSDictionary(contentsOf: appBundle?.appendingPathComponent("Contents/Info.plist") ?? URL(fileURLWithPath: "/"))
+            let info: [String: Any] = ["running": false, "appPath": appBundle?.path as Any? ?? NSNull(),
+                                       "version": plist?["CFBundleShortVersionString"] ?? NSNull(),
+                                       "build": plist?["CFBundleVersion"] ?? NSNull()]
+            output(inv, ["result": info])
+        case "app open":
+            try runOpen(hidden: false)
+            output(inv, ["result": ["ok": true], "message": "Opened Valkey.app."])
+        case "app quit":
+            guard remotePort() != nil else { return output(inv, ["result": ["ok": true], "message": "Valkey.app isn't running."]) }
+            let reply = try request(inv)
+            cachedPort = nil
+            for _ in 0..<600 where remotePort() != nil { usleep(100_000) }   // servers stop gracefully first
+            output(inv, reply)
         default:
-            throw Failure(message: "Unknown command \(inv.command).", code: Failure.usage)
+            output(inv, try request(inv))
         }
     }
 
+    private static func server(_ query: String) throws -> ServerInfo {
+        let result = try request(Invocation(command: "status", args: [query]))["result"] ?? [:]
+        return try JSONDecoder().decode(ServerInfo.self, from: JSONSerialization.data(withJSONObject: result))
+    }
+
     /// Polls the server's status until `done` says so, or fails after `timeout` seconds.
-    private static func wait(for server: String, timeout: TimeInterval, what: String,
+    private static func wait(for id: String, timeout: TimeInterval, what: String,
                              until done: (ServerInfo) throws -> Bool) throws -> ServerInfo {
         let deadline = Date().addingTimeInterval(timeout)
         while true {
-            guard let info = try send(Request(command: "status", server: server)).servers?.first else {
-                throw Failure(message: "The server was removed.")
-            }
+            let info = try server(id)
             if try done(info) { return info }
             if Date() > deadline {
                 throw Failure(message: "“\(info.name)” didn't \(what) within \(Int(timeout))s (state: \(info.state)). "
@@ -262,38 +357,71 @@ enum CLI {
 
     // MARK: Talking to the app
 
-    private static func send(_ request: Request) throws -> Response {
+    /// Sends a command and returns the app's reply ({"result", "message", "note"}), waiting for jobs
+    /// (downloads, stats) the app runs in the background.
+    private static func request(_ inv: Invocation) throws -> [String: Any] {
+        var reply = try send(inv)
+        var announced = false
+        while let job = reply["job"] as? String {
+            if !announced, isatty(STDERR_FILENO) != 0 {
+                FileHandle.standardError.write(Data("Working…\n".utf8))
+                announced = true
+            }
+            usleep(250_000)
+            reply = try send(Invocation(command: "job", args: [job]))
+        }
+        return reply
+    }
+
+    private static func send(_ inv: Invocation) throws -> [String: Any] {
         let port = try appPort()
         var reply: Unmanaged<CFData>?
-        let status = CFMessagePortSendRequest(port, 0, try JSONEncoder().encode(request) as CFData, 5, 30,
+        let status = CFMessagePortSendRequest(port, 0, try JSONEncoder().encode(inv) as CFData, 5, 30,
                                               CFRunLoopMode.defaultMode.rawValue, &reply)
-        guard status == kCFMessagePortSuccess, let data = reply?.takeRetainedValue() as Data? else {
+        guard status == kCFMessagePortSuccess, let data = reply?.takeRetainedValue() as Data?,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw Failure(message: "Valkey.app didn't answer (error \(status)).", code: Failure.unreachable)
         }
-        let response = try JSONDecoder().decode(Response.self, from: data)
-        if let error = response.error { throw Failure(message: error, code: response.exitCode ?? Failure.failed) }
-        return response
+        if let error = object["error"] as? String {
+            throw Failure(message: error, code: (object["exitCode"] as? NSNumber)?.int32Value ?? Failure.failed)
+        }
+        return object
     }
 
     private static var cachedPort: CFMessagePort?
 
+    private static func remotePort() -> CFMessagePort? {
+        CFMessagePortCreateRemote(nil, portName as CFString)
+    }
+
+    /// This executable is Valkey.app/Contents/MacOS/Valkey (maybe via a symlink); nil if it isn't in a bundle.
+    private static var appBundle: URL? {
+        let exe = URL(fileURLWithPath: Bundle.main.executablePath ?? CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let app = exe.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return app.pathExtension == "app" ? app : nil
+    }
+
+    private static func runOpen(hidden: Bool) throws {
+        let open = Process()
+        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        open.arguments = (hidden ? ["-g", "-j"] : []) + (appBundle.map { [$0.path] } ?? ["-b", "app.valkey.Valkey"])
+        try open.run()
+        open.waitUntilExit()
+        guard open.terminationStatus == 0 else {
+            throw Failure(message: "Couldn't open Valkey.app (is it installed?).", code: Failure.unreachable)
+        }
+    }
+
     /// The app's message port, launching the app hidden in the background if it isn't running.
     private static func appPort() throws -> CFMessagePort {
-        if let port = cachedPort ?? CFMessagePortCreateRemote(nil, portName as CFString) {
+        if let port = cachedPort ?? remotePort() {
             cachedPort = port
             return port
         }
-        // This executable is Valkey.app/Contents/MacOS/Valkey; open that copy of the app if we can.
-        let exe = URL(fileURLWithPath: Bundle.main.executablePath ?? CommandLine.arguments[0]).resolvingSymlinksInPath()
-        let app = exe.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let open = Process()
-        open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        open.arguments = ["-g", "-j"] + (app.pathExtension == "app" ? [app.path] : ["-b", "app.valkey.Valkey"])
         FileHandle.standardError.write(Data("Starting Valkey.app…\n".utf8))
-        try? open.run()
-        open.waitUntilExit()
+        try runOpen(hidden: true)
         for _ in 0..<150 {
-            if let port = CFMessagePortCreateRemote(nil, portName as CFString) {
+            if let port = remotePort() {
                 cachedPort = port
                 return port
             }
@@ -321,16 +449,18 @@ enum CLI {
 
     private struct LogOutput: Encodable { var logFile: String; var lines: [String] }
 
-    private static func logs(_ server: ServerInfo, lines: Int, follow: Bool, json: Bool) throws {
+    private static func logs(_ server: ServerInfo, lines: Int, follow: Bool, filter: String, json: Bool) throws {
+        func keep(_ line: String) -> Bool { filter.isEmpty || line.localizedCaseInsensitiveContains(filter) }
         guard let handle = FileHandle(forReadingAtPath: server.logFile) else {
             if follow { throw Failure(message: "No log yet at \(server.logFile).") }
             return json ? printJSON(LogOutput(logFile: server.logFile, lines: [])) : ()
         }
-        let tail = lastLines(of: String(decoding: handle.readDataToEndOfFile(), as: UTF8.self), lines)
+        let all = lastLines(of: String(decoding: handle.readDataToEndOfFile(), as: UTF8.self), .max)
+        let tail = Array(all.filter(keep).suffix(lines))
         if json && !follow {
             return printJSON(LogOutput(logFile: server.logFile, lines: tail))
         }
-        func emit(_ line: String) { json ? printJSON(line) : print(line) }
+        func emit(_ line: String) { guard keep(line) else { return }; json ? printJSON(line) : print(line) }
         tail.forEach(emit)
         guard follow else { return }
         setvbuf(stdout, nil, _IOLBF, 0)
@@ -358,24 +488,59 @@ enum CLI {
 
     // MARK: Output
 
-    private static func output(_ inv: Invocation, _ server: ServerInfo, _ message: String? = nil) {
-        if inv.json { return printJSON(server) }
-        if let message { return print(message) }
-        let rows: [(String, String?)] = [
-            ("Name", server.name), ("State", server.state + (server.pid.map { " (pid \($0))" } ?? "")),
-            ("Port", "\(server.port)"), ("Version", server.version),
-            ("Modules", server.modules.isEmpty ? nil : server.modules.joined(separator: ", ")),
-            ("Auto-start", server.startAutomatically ? "yes" : "no"), ("Data", server.dataDirectory),
-            ("Log", server.logFile), ("Failure", server.failure), ("ID", server.id),
-        ]
-        for case let (label, value?) in rows { print("\(label):".padding(toLength: 12, withPad: " ", startingAt: 0) + value) }
+    /// Columns for commands that list things; other results print as indented `key: value` lines.
+    static let columns: [String: [String]] = [
+        "list": ["name", "state", "port", "version", "id"],
+        "status": ["name", "state", "port", "version", "id"],
+        "versions": ["version", "installed", "available", "usedBy"],
+        "versions refresh": ["version", "installed", "available", "usedBy"],
+        "modules": ["id", "title", "version", "valkey", "installed", "usedBy"],
+    ]
+
+    /// Prints a reply: its result as JSON, or else its message (or the rendered result) for people.
+    private static func output(_ inv: Invocation, _ reply: [String: Any]) {
+        let result = reply["result"]
+        if inv.json { return printJSON(any: result ?? [String: Any]()) }
+        if let note = reply["note"] as? String { FileHandle.standardError.write(Data("\(note)\n".utf8)) }
+        if let message = reply["message"] as? String { return print(message) }
+        if let rows = result as? [[String: Any]], let columns = columns[inv.command] {
+            return print(rows.isEmpty ? "None." : table([columns.map { $0.uppercased() }] + rows.map { row in columns.map { text(row[$0]) } }))
+        }
+        render(result ?? NSNull()).forEach { print($0) }
     }
 
-    private static func output(_ inv: Invocation, _ servers: [ServerInfo]) {
-        if inv.json { return printJSON(servers) }
-        if servers.isEmpty { return print("No servers. Create one with `\(name) create`.") }
-        print(table([["NAME", "STATE", "PORT", "VERSION", "ID"]]
-                    + servers.map { [$0.name, $0.state, "\($0.port)", $0.version, $0.id] }))
+    static func text(_ value: Any?) -> String {
+        switch value {
+        case nil, is NSNull: return "-"
+        case let n as NSNumber where CFGetTypeID(n) == CFBooleanGetTypeID(): return n.boolValue ? "yes" : "no"
+        case let a as [Any]: return a.isEmpty ? "-" : a.map { text($0) }.joined(separator: ", ")
+        case let s as String: return s
+        default: return "\(value!)"
+        }
+    }
+
+    /// Indented `key: value` lines; arrays of objects become `-` items.
+    static func render(_ value: Any, indent: String = "") -> [String] {
+        if let dict = value as? [String: Any] {
+            return dict.keys.sorted().flatMap { key -> [String] in
+                switch dict[key] {
+                case let nested as [String: Any]:
+                    return ["\(indent)\(key):"] + render(nested, indent: indent + "  ")
+                case let items as [[String: Any]] where !items.isEmpty:
+                    return ["\(indent)\(key):"] + items.flatMap { item -> [String] in
+                        var lines = render(item, indent: indent + "    ")
+                        if !lines.isEmpty { lines[0] = indent + "  - " + String(lines[0].dropFirst(indent.count + 4)) }
+                        return lines
+                    }
+                default:
+                    return ["\(indent)\(key): \(text(dict[key]))"]
+                }
+            }
+        }
+        if let items = value as? [[String: Any]] {
+            return render(["items": items], indent: indent)
+        }
+        return [indent + text(value)]
     }
 
     static func table(_ rows: [[String]]) -> String {
@@ -386,10 +551,16 @@ enum CLI {
         }.joined(separator: "\n")
     }
 
-    private static func printJSON<T: Encodable>(_ value: T) {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        print(String(decoding: (try? encoder.encode(value)) ?? Data(), as: UTF8.self))
+    private static func encodeJSON<T: Encodable>(_ value: T) -> Any {
+        (try? JSONEncoder().encode(value)).flatMap { try? JSONSerialization.jsonObject(with: $0, options: .fragmentsAllowed) } ?? NSNull()
     }
 
+    private static func printJSON<T: Encodable>(_ value: T) {
+        printJSON(any: encodeJSON(value))
+    }
+
+    private static func printJSON(any value: Any) {
+        let data = (try? JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed])) ?? Data()
+        print(String(decoding: data, as: UTF8.self))
+    }
 }

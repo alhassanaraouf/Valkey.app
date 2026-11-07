@@ -312,7 +312,7 @@ final class ValkeyServer: ObservableObject, Identifiable {
         NSPasteboard.general.setString(connectionURL(for: user), forType: .string)
     }
 
-    struct Stats {
+    struct Stats: Codable {
         var memoryBytes = 0, clients = 0, ops = 0, keys = 0
         var memory = ""
         var hitRate: Int?   // percent; nil until there's been a lookup
