@@ -81,6 +81,8 @@
             "acceptedAnswer": { "@type": "Answer", "text": "Yes. Valkey.app is free and open source under the Apache License 2.0. Valkey itself is BSD-licensed." } },
           { "@type": "Question", "name": "Which Macs does Valkey.app run on?",
             "acceptedAnswer": { "@type": "Answer", "text": "Any Mac with macOS 13 Ventura or later, on Apple Silicon or Intel. The app and every Valkey build it installs are universal binaries." } },
+          { "@type": "Question", "name": "Can I install Valkey.app with Homebrew?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Install the app as a cask with brew install --cask alhassanaraouf/tap/valkey, then allow it once (the app isn't notarized yet). This installs Valkey.app itself, not the valkey server formula." } },
           { "@type": "Question", "name": "Why does macOS say Valkey.app can't be verified?",
             "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15 and later, open System Settings, go to Privacy & Security and click Open Anyway; on macOS 13 and 14, Control-click the app and choose Open. Updates install without this step." } }
         ]
@@ -224,6 +226,10 @@ xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
     <h3>Which Macs does Valkey.app run on?</h3>
     <p>Any Mac with macOS 13 Ventura or later, on Apple Silicon or Intel. The app and every Valkey build it
       installs are universal binaries.</p>
+    <h3>Can I install Valkey.app with Homebrew?</h3>
+    <p>Yes. Install the app as a cask with <code>brew install --cask alhassanaraouf/tap/valkey</code>,
+      then allow it once (the app isn't notarized yet). This installs Valkey.app itself, not the
+      <code>valkey</code> server formula. See <a href="/install-valkey-on-mac/">how to install Valkey on Mac</a>.</p>
     <h3>Why does macOS say Valkey.app can't be verified?</h3>
     <p>Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15
       and later, open System Settings, go to Privacy &amp; Security and click Open Anyway; on macOS 13 and 14,
