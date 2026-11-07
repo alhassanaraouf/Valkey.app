@@ -1,7 +1,16 @@
 import Cocoa
 import SwiftUI
 
+/// Run as `valkey-app` (or with a command, e.g. `Valkey list`) this executable is the command-line
+/// interface instead of the app; see CLI.swift.
 @main
+enum Main {
+    @MainActor static func main() {
+        if CLI.isInvocation(CommandLine.arguments) { exit(CLI.run(Array(CommandLine.arguments.dropFirst()))) }
+        ValkeyApp.main()
+    }
+}
+
 struct ValkeyApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @ObservedObject private var store: ServerStore
@@ -173,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleQuitEvent(_:withReplyEvent:)),
                                                      forEventClass: AEEventClass(kCoreEventClass),
                                                      andEventID: AEEventID(kAEQuitApplication))
+        CLIServer.listen()
         // Auto-start servers, plus any that were running before an update relaunched the app.
         let resume = Set(Updater.takeServersToResume())
         ServerStore.shared.servers

@@ -53,6 +53,11 @@ The cask lives in [alhassanaraouf/homebrew-tap](https://github.com/alhassanaraou
   once for permission to control Ghostty.
 - Removing a server stops it but keeps its data directory. Quitting the app stops all servers gracefully.
 
+- **Command line** — `valkey-app` does everything the UI does: servers, settings, users, modules, versions
+  and app settings, with `--json` for scripts and AI agents. `valkey-app help` lists the commands, and
+  [`app/CLI.md`](app/CLI.md) is the reference. Homebrew links it automatically. Otherwise run
+  `/Applications/Valkey.app/Contents/MacOS/Valkey <command>`, or link that file as `valkey-app`.
+
 Files, all under `~/Library/Application Support/Valkey/`:
 
 - `Versions/<version>/bin/` — installed `valkey-server` / `valkey-cli`
