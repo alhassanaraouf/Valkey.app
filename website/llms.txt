@@ -11,8 +11,15 @@
   list of SHA-256 checksums.
 - Modules are added per server and matched to the server's Valkey version.
 - Menu-bar icon to start, stop and connect with valkey-cli; the app updates itself (with confirmation).
-- Not yet notarized by Apple: on first launch, allow it in System Settings → Privacy & Security → Open Anyway
+">- Not yet notarized by Apple: on first launch, allow it in System Settings → Privacy & Security → Open Anyway
   (macOS 15+) or Control-click → Open (macOS 13–14).
+
+## Install
+
+- Download Valkey.dmg, open it, drag Valkey.app into Applications.
+- Or with Homebrew (installs the app, not the `valkey` server formula):
+
+  brew install --cask alhassanaraouf/tap/valkey
 
 ## Links
 
