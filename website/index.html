@@ -148,6 +148,13 @@
       From then on Valkey.app updates itself.</li>
   </ol>
 
+  <h3>Install with Homebrew</h3>
+  <p>Prefer <code>brew</code>? Install the app as a cask, then allow it once with the last command:</p>
+  <pre>brew install --cask alhassanaraouf/tap/valkey
+xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
+  <p class="note">This installs Valkey.app itself, not the <code>valkey</code> server formula.
+    Update with <code>brew upgrade --cask valkey</code>, or let the app update itself.</p>
+
   <details open>
     <summary>Allow Valkey.app on macOS 15 Sequoia and later</summary>
     <ol class="steps">
