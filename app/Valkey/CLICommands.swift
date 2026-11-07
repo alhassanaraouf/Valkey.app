@@ -19,9 +19,14 @@ extension CLI {
         var value: String?          // placeholder shown in help, e.g. "N"; nil for flags
         var help: String
 
-        init(_ name: String, short: String? = nil, _ kind: Kind, _ value: String? = nil, _ help: String) {
+        init(_ name: String, short: String? = nil, _ kind: Kind, _ value: String?, _ help: String) {
             self.name = name; self.short = short; self.kind = kind; self.help = help
             self.value = value ?? (kind == .toggle ? "on|off" : kind == .number ? "N" : nil)
+        }
+
+        /// Flags, toggles (on|off) and numbers (N) get their placeholder from the kind.
+        init(_ name: String, short: String? = nil, _ kind: Kind, _ help: String) {
+            self.init(name, short: short, kind, nil, help)
         }
     }
 
