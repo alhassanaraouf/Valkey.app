@@ -18,6 +18,17 @@ the same `ServerStore` / `VersionStore` methods and the same checks (`ServerStor
   option with a description, and examples, e.g. `valkey-app help create` or `valkey-app user add -h`.
 - `valkey-app help --json` prints the whole reference (commands, arguments, options, examples) as JSON, for agents.
 - `valkey-app --version` prints the app's version.
+- Tab completion for zsh, bash and fish: **Install CLI** / `app install-cli` sets it up (zsh in
+  `/usr/local/share/zsh/site-functions`, fish in `~/.config/fish/completions` if fish is installed, bash in
+  `~/.local/share/bash-completion/completions` if bash-completion is installed). By hand:
+  `source <(valkey-app completion zsh)` in `~/.zshrc`, `eval "$(valkey-app completion bash)"` in `~/.bashrc`, or
+  `valkey-app completion fish > ~/.config/fish/completions/valkey-app.fish`. The scripts call the hidden
+  `valkey-app __complete <words…>`, which completes commands, aliases, options, values, and server and user
+  names (read from the app's saved settings, without launching it), from the same command list as help.
+- Aliases: `ls`/`ps` → `list`, `info` → `show`, `new`/`add` → `create`, `rm`/`remove` → `delete`, `edit` → `set`,
+  `log` → `logs`; under `user` (or `users`), `versions` and `modules`: `rm`/`delete`/`uninstall` → `remove`,
+  `add`/`create` → `add`/`install`, `ls`/`list` → the list. Defined in `CLI.aliases`; `help <command>` and
+  `help --json` (`aliases`) list them.
 - Mistakes get a usage line and a hint, e.g. `Unknown option --prot. Did you mean --port?`.
 
 Commands, options and help text are defined once, in `Valkey/CLICommands.swift`. Parsing and every help
@@ -64,7 +75,7 @@ version?}]`), `dataDirectory`, `configFile`, `logFile`.
 
 **App** (`app …`): `running`, `version`, `build`, `pid`, `appPath`, `dataRoot`, `menuBar`, `openAtLogin`,
 `autoUpdate`, `canCheckForUpdates`, `terminal` (bundle id), `terminals` (`[{id, name}]`), `registryURL`,
-`registryError`, `valkeyCLILink`, `valkeyCLIPathLine`.
+`registryError`, `valkeyCLILink` (`Not installed`, `Installed (Valkey 9.1.2)` or `Out of date: …`).
 
 Other results: `url` → `{url}`, `logs` → `{logFile, lines}` (`-f --json` prints one JSON string per line),
 and actions without data → `{ok: true}`.
@@ -142,8 +153,7 @@ with a reason (see AGENTS.md).
 | Show in menu bar | `app set --menu-bar on|off` |
 | Open at login | `app set --open-at-login on|off` |
 | Terminal (used by Connect…) | `app set --terminal BUNDLE-ID`; choices in `terminals` |
-| Command Line: status, **Install valkey-cli** / **Relink to Newest** | `valkeyCLILink` in `app`; `app link-cli` |
-| PATH line + **Copy** | `valkeyCLIPathLine` in `app` |
+| Command Line: status, **Install CLI** / **Relink to Newest** (PATH links + tab completion) | `valkeyCLILink` in `app`; `app install-cli`; `completion <shell>` |
 | Check for updates automatically | `app set --auto-update on|off` |
 | Valkey.app version | `version` / `build` in `app` |
 | **Check for Updates…** | `app check-updates` |

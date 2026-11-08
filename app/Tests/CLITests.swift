@@ -18,6 +18,16 @@ check("Xcode args are app", !CLI.isInvocation(["Valkey", "-NSDocumentRevisionsDe
 
 // Parsing
 check("list", parsed(["list"]) == CLI.Invocation(command: "list"))
+check("alias ls", parsed(["ls", "--json"]) == CLI.Invocation(command: "list", json: true))
+check("alias rm keeps args", parsed(["rm", "cache", "-y"]) == CLI.Invocation(command: "delete", args: ["cache"], options: ["--yes": ""]))
+check("alias new names server", parsed(["new", "cache"])?.options["--name"] == "cache")
+check("alias subcommand", parsed(["versions", "rm", "9.1.2"]) == CLI.Invocation(command: "versions remove", args: ["9.1.2"]))
+check("alias plural group", parsed(["users", "rm", "cache", "app"]) == CLI.Invocation(command: "user remove", args: ["cache", "app"]))
+check("alias group list", parsed(["modules", "ls"]) == CLI.Invocation(command: "modules"))
+check("alias help", parsed(["help", "ls"]) == CLI.Invocation(command: "help", args: ["list"]) && parsed(["rm", "-h"])?.args == ["delete"])
+check("alias is CLI", CLI.isInvocation(["Valkey", "ls"]) && CLI.isInvocation(["Valkey", "users"]))
+check("every alias names a command", CLI.aliases.values.allSatisfy { CLI.specs.map(\.name).contains($0) })
+check("aliases don't shadow commands", CLI.aliases.keys.allSatisfy { !CLI.specs.map(\.name).contains($0) })
 check("--json anywhere", parsed(["--json", "status", "cache"]) == CLI.Invocation(command: "status", args: ["cache"], json: true))
 check("create name becomes --name", parsed(["create", "cache", "--port", "6390", "--version=9.1.2"])
       == CLI.Invocation(command: "create", options: ["--name": "cache", "--port": "6390", "--version": "9.1.2"]))
@@ -174,6 +184,28 @@ check("duplicate user", ConfigRules.usersProblem([("a", "pw"), ("a", "pw")]) != 
 check("user without password", ConfigRules.usersProblem([("a", "")]) != nil)
 check("user with space", ConfigRules.usersProblem([("a b", "pw")]) != nil)
 check("bools", ConfigRules.bool("on") == true && ConfigRules.bool("NO") == false && ConfigRules.bool("x") == nil)
+
+// Tab completion
+let fakeServers: [(name: String, port: Int, users: [String])] = [("cache", 6379, ["app", "reporter"]), ("Valkey 9.1.2", 6380, [])]
+func words(_ w: [String]) -> [String] { CLI.completions(for: w, servers: fakeServers).map(\.0) }
+check("complete commands", Set(["list", "ls", "user", "users", "versions", "create", "completion"]).isSubset(of: words([""])))
+check("complete prefix", words(["l"]).sorted() == ["list", "log", "logs", "ls"])
+check("complete subcommands", words(["user", ""]).sorted() == ["add", "create", "delete", "edit", "remove", "rm", "set"])
+check("complete plural group", words(["users", "r"]).sorted() == ["remove", "rm"])
+check("complete servers", words(["start", ""]) == ["cache", "6379", "Valkey 9.1.2", "6380"])
+check("complete servers after alias", words(["rm", "Val"]) == ["Valkey 9.1.2"])
+check("complete users of server", words(["user", "remove", "cache", ""]) == ["app", "reporter"])
+check("complete options", words(["set", "cache", "--max"]) == ["--max-memory"])
+check("complete skips used options", !words(["set", "cache", "--persistence", "on", "--"]).contains("--persistence"))
+check("complete toggle values", words(["set", "cache", "--persistence", ""]) == ["on", "off"])
+check("complete eviction policies", words(["set", "cache", "--eviction-policy", "allkeys-l"]) == ["allkeys-lru", "allkeys-lfu"])
+check("complete open what", words(["open", "cache", ""]) == ["config", "data", "log"])
+check("complete shells", words(["completion", ""]) == ["bash", "zsh", "fish"])
+check("complete nothing for valkey-cli args", words(["cli", "cache", ""]).isEmpty && words(["cli", "cache", "GET", "k"]).isEmpty)
+check("complete nothing past last arg", words(["start", "cache", ""]).isEmpty)
+check("complete global options", words(["list", "--j"]) == ["--json"])
+check("every shell has a script", CLI.shells.allSatisfy { CLI.completionScript(for: $0)?.contains("__complete") == true })
+check("completion command parses", parsed(["completion", "zsh"]) == CLI.Invocation(command: "completion", args: ["zsh"]))
 
 print(failures == 0 ? "all passed" : "\(failures) failed")
 exit(failures == 0 ? 0 : 1)

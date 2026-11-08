@@ -41,6 +41,8 @@ extension CLI {
         var details: String?
         var examples: [Example]
 
+        var aliases: [String] { CLI.aliases.filter { $0.value == name }.keys.sorted() }
+
         var usage: String {
             let args = args.map { a in (a.required ? "<\(a.name)>" : "[\(a.name)]") + (a.variadic ? "…" : "") }
             return ([CLI.name, name] + args + (options.isEmpty ? [] : ["[options]"])).joined(separator: " ")
@@ -48,10 +50,10 @@ extension CLI {
         var argCount: ClosedRange<Int> {
             args.filter(\.required).count...(args.last?.variadic == true ? Int.max : args.count)
         }
-        enum CodingKeys: String, CodingKey { case name, group, usage, args, options, summary, details, examples }
+        enum CodingKeys: String, CodingKey { case name, aliases, group, usage, args, options, summary, details, examples }
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(name, forKey: .name); try c.encode(group, forKey: .group); try c.encode(usage, forKey: .usage)
+            try c.encode(name, forKey: .name); try c.encode(aliases, forKey: .aliases); try c.encode(group, forKey: .group); try c.encode(usage, forKey: .usage)
             try c.encode(args, forKey: .args); try c.encode(options, forKey: .options); try c.encode(summary, forKey: .summary)
             try c.encodeIfPresent(details, forKey: .details); try c.encode(examples, forKey: .examples)
         }
@@ -213,10 +215,10 @@ extension CLI {
                        Option("--auto-update", .toggle, "Check for Valkey.app updates automatically.")],
              summary: "Change Valkey.app's settings; only the options you pass change.",
              examples: [ex("app set --open-at-login on", "Start Valkey.app at login."), ex("app set --terminal com.mitchellh.ghostty", "Use Ghostty for `connect`.")]),
-        Spec(name: "app link-cli", group: "App",
-             summary: "Link valkey-cli in ~/Library/Application Support/Valkey/bin to the newest installed version.",
-             details: "Add that folder to your PATH; `app` shows the exact line for your shell profile.",
-             examples: [ex("app link-cli", "Create or update the link.")]),
+        Spec(name: "app install-cli", group: "App",
+             summary: "Add valkey-cli and valkey-app to /usr/local/bin, with valkey-cli pointing at the newest installed version.",
+             details: "Like Settings › Command Line › Install CLI. /usr/local/bin is on every shell's PATH. It also sets up tab completion: zsh (/usr/local/share/zsh/site-functions), fish (~/.config/fish/completions) if fish is installed, and bash (~/.local/share/bash-completion) if bash-completion is installed. macOS asks for an admin password if /usr/local isn't writable. Run it again after installing a newer version to relink valkey-cli.",
+             examples: [ex("app install-cli", "Install, or relink valkey-cli to the newest version.")]),
         Spec(name: "app check-updates", group: "App",
              summary: "Check for a new Valkey.app. The result appears in the app's update window.",
              examples: [ex("app check-updates", "Check now.")]),
@@ -231,6 +233,12 @@ extension CLI {
         Spec(name: "help", group: "Help", args: [Arg(name: "command", required: false, variadic: true, help: "A command, e.g. create or user add.")],
              summary: "Show help for all commands or for one; --json prints this reference as JSON.",
              examples: [ex("help create", "Options and examples for create; the same as `create --help`."), ex("help --json", "Every command, argument and option as JSON.")]),
+        Spec(name: "completion", group: "Help", args: [Arg(name: "shell", help: "bash, zsh or fish.")],
+             summary: "Print the tab-completion script for bash, zsh or fish.",
+             details: "Settings › Command Line › Install CLI (or `app install-cli`) sets this up for every shell. To do it by hand, load the script from your shell's startup file as in the examples. It completes commands, options, values and your server names.",
+             examples: [ex("completion zsh", "For ~/.zshrc: source <(valkey-app completion zsh)"),
+                        ex("completion bash", "For ~/.bashrc: eval \"$(valkey-app completion bash)\""),
+                        ex("completion fish", "Save it: valkey-app completion fish > ~/.config/fish/completions/valkey-app.fish")]),
     ]
 
     static let globalOptions = [
@@ -238,7 +246,19 @@ extension CLI {
         Option("--help", short: "-h", .flag, "Show help for the command."),
     ]
 
-    static func spec(_ name: String) -> Spec? { specs.first { $0.name == name } }
+    /// Other names people reach for, mapped to the command they mean. `help <command>` lists them.
+    static let aliases: [String: String] = [
+        "ls": "list", "ps": "list", "info": "show", "new": "create", "add": "create",
+        "rm": "delete", "remove": "delete", "edit": "set", "log": "logs",
+        "user rm": "user remove", "user delete": "user remove", "user edit": "user set", "user create": "user add",
+        "users add": "user add", "users set": "user set", "users remove": "user remove", "users rm": "user remove",
+        "versions ls": "versions", "versions list": "versions", "versions add": "versions install",
+        "versions rm": "versions remove", "versions uninstall": "versions remove",
+        "modules ls": "modules", "modules list": "modules", "modules add": "modules install",
+        "modules rm": "modules remove", "modules uninstall": "modules remove",
+    ]
+
+    static func spec(_ name: String) -> Spec? { specs.first { $0.name == (aliases[name] ?? name) } }
 
     // MARK: Help text
 
@@ -253,6 +273,7 @@ extension CLI {
         }
         lines += ["",
                   "<server> is a server's name, port or id. Add --json to any command for JSON output.",
+                  "Common aliases work too: ls, ps, info, new, rm, edit, log, and rm/ls/add under user, versions and modules.",
                   "Valkey.app is launched in the background if it isn't running.",
                   "Exit codes: 0 ok, 1 failed, 2 usage error, 3 not found, 4 Valkey.app unreachable.",
                   "",
@@ -262,6 +283,7 @@ extension CLI {
 
     static func help(for s: Spec) -> String {
         var lines = wrap(s.summary, indent: 2, first: "\(name) \(s.name): ") + ["", "Usage: \(s.usage)"]
+        if !s.aliases.isEmpty { lines += ["Aliases: " + s.aliases.map { "\(name) \($0)" }.joined(separator: ", ")] }
         if let details = s.details { lines += [""] + wrap(details, indent: 0) }
         func rows(_ title: String, _ items: [(String, String)]) {
             guard !items.isEmpty else { return }
@@ -387,7 +409,7 @@ extension CLI {
                 let subs = specs.filter { $0.name.hasPrefix(positional[0] + " ") }.map { String($0.name.split(separator: " ")[1]) }
                 throw usageError("\(positional[0]) needs one of: \(subs.joined(separator: ", ")).")
             }
-            let hint = suggestion(for: positional[0], in: specs.map(\.name)).map { " Did you mean `\($0)`?" } ?? ""
+            let hint = suggestion(for: positional[0], in: specs.map(\.name) + aliases.keys.filter { !$0.contains(" ") }).map { " Did you mean `\($0)`?" } ?? ""
             throw usageError("Unknown command “\(positional[0])”.\(hint)")
         }
         var args = found
@@ -409,3 +431,149 @@ extension CLI {
         return Invocation(command: s.name, args: args, options: options, json: json)
     }
 }
+
+// MARK: Tab completion
+// The shells' scripts are thin wrappers around the hidden `valkey-app __complete <words…>`, which prints
+// "candidate<TAB>description" lines from `specs` and the saved servers, so completion never goes stale.
+extension CLI {
+    static let shells = ["bash", "zsh", "fish"]
+
+    /// Candidates for the last word, given the words typed after `valkey-app`.
+    /// `servers` is [(name, port, users)] from the app's saved settings.
+    static func completions(for words: [String], servers: [(name: String, port: Int, users: [String])]) -> [(String, String)] {
+        let current = words.last ?? ""
+        let typed = Array(words.dropLast())
+        let allOptions = specs.flatMap(\.options) + globalOptions
+        func option(_ word: String) -> Option? { allOptions.first { $0.name == word || $0.short == word } }
+
+        // Words that are arguments, skipping options and their values.
+        var positional: [String] = [], i = 0
+        while i < typed.count {
+            let word = typed[i]
+            if positional.first == "cli" && positional.count >= 2 { return [] }   // valkey-cli's own arguments
+            if word.hasPrefix("-") {
+                if let o = option(word), o.kind != .flag, !word.contains("=") { i += 1 }
+            } else {
+                positional.append(word)
+            }
+            i += 1
+        }
+        if positional.first == "cli" && positional.count >= 2 { return [] }
+        let found = command(in: positional)
+
+        var candidates: [(String, String)] = []
+        if let previous = typed.last, !current.hasPrefix("-"), let o = option(previous), o.kind != .flag, !previous.contains("=") {
+            switch o.kind {
+            case .toggle: candidates = [("on", ""), ("off", "")]
+            case .text where o.name == "--eviction-policy": candidates = ConfigRules.evictionPolicies.map { ($0, "") }
+            default: return []
+            }
+        } else if current.hasPrefix("-") {
+            let used = Set(typed)
+            for o in (found?.0.options ?? []) + globalOptions where !used.contains(o.name) {
+                candidates.append((o.name, o.help))
+            }
+        } else if positional.isEmpty {
+            var seen = Set<String>()
+            for s in specs {
+                let first = String(s.name.split(separator: " ")[0])
+                if seen.insert(first).inserted { candidates.append((first, s.name.contains(" ") ? "\(first) commands" : s.summary)) }
+            }
+            for (alias, target) in aliases.sorted(by: { $0.key < $1.key }) {
+                let first = String(alias.split(separator: " ")[0])
+                if seen.insert(first).inserted { candidates.append((first, "Same as \(alias.contains(" ") ? String(target.split(separator: " ")[0]) : target).")) }
+            }
+        } else if positional.count == 1, let real = group(positional[0]) {
+            // Subcommands of a group, e.g. `user ` → add, set, remove (and `users ` → the same).
+            for s in specs where s.name.hasPrefix(real + " ") { candidates.append((String(s.name.dropFirst(real.count + 1)), s.summary)) }
+            for (alias, target) in aliases where alias.hasPrefix(real + " ") {
+                candidates.append((String(alias.dropFirst(real.count + 1)), "Same as \(target)."))
+            }
+        } else if let (s, args) = found, args.count < s.args.count || s.args.last?.variadic == true {
+            let arg = s.args[min(args.count, s.args.count - 1)]
+            switch arg.name {
+            case "server":
+                for server in servers {
+                    candidates.append((server.name, "port \(server.port)"))
+                    candidates.append((String(server.port), server.name))
+                }
+            case "user":
+                let server = servers.first { $0.name == args.first || String($0.port) == args.first }
+                candidates = (server?.users ?? []).map { ($0, "") }
+            case "what": candidates = [("config", "valkey.conf"), ("data", "Data directory"), ("log", "valkey.log")]
+            case "shell": candidates = shells.map { ($0, "") }
+            case "command": candidates = specs.map { ($0.name, $0.summary) }
+            default: return []
+            }
+        }
+        return candidates.filter { $0.0.hasPrefix(current) }
+    }
+
+    /// The command group a first word starts (`user`, `versions`, …), with plural aliases (`users` → `user`).
+    private static func group(_ word: String) -> String? {
+        if specs.contains(where: { $0.name.hasPrefix(word + " ") }) { return word }
+        return aliases.first { $0.key.hasPrefix(word + " ") }.map { String($0.value.split(separator: " ")[0]) }
+    }
+
+    /// The saved servers, read from the app's settings without launching it.
+    static func savedServers() -> [(name: String, port: Int, users: [String])] {
+        guard let data = CFPreferencesCopyAppValue("servers" as CFString, "app.valkey.Valkey" as CFString) as? Data,
+              let list = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else { return [] }
+        return list.compactMap { s in
+            guard let name = s["name"] as? String, let port = s["port"] as? Int else { return nil }
+            return (name, port, (s["users"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String })
+        }
+    }
+
+    static func completionScript(for shell: String) -> String? {
+        switch shell {
+        case "bash": return #"""
+            # valkey-app completion for bash
+            _valkey_app() {
+                local line
+                COMPREPLY=()
+                while IFS= read -r line; do
+                    COMPREPLY+=("$(printf '%q' "${line%%$'\t'*}")")
+                done < <(valkey-app __complete "${COMP_WORDS[@]:1:COMP_CWORD}" 2>/dev/null)
+            }
+            complete -o default -F _valkey_app valkey-app
+            """#
+        case "zsh": return #"""
+            #compdef valkey-app
+            # valkey-app completion for zsh
+            _valkey_app() {
+                local -a descs
+                local line
+                for line in "${(@f)$(valkey-app __complete "${(@)words[2,CURRENT]}" 2>/dev/null)}"; do
+                    [[ -z $line ]] && continue
+                    if [[ $line == *$'\t'* ]]; then
+                        descs+=("${${line%%$'\t'*}//:/\\:}:${line#*$'\t'}")
+                    else
+                        descs+=("${line//:/\\:}")
+                    fi
+                done
+                if (( ${#descs} )); then _describe -t values valkey-app descs; else _files; fi
+            }
+            # Autoloaded from an fpath file named _valkey-app, or sourced from ~/.zshrc.
+            if [[ $funcstack[1] == _valkey-app ]]; then
+                _valkey_app "$@"
+            else
+                (( $+functions[compdef] )) || { autoload -Uz compinit && compinit; }
+                compdef _valkey_app valkey-app
+            fi
+            """#
+        case "fish": return #"""
+            # valkey-app completion for fish
+            function __valkey_app_complete
+                set -l words (commandline -opc)
+                set -e words[1]
+                set -l current (commandline -ct)
+                valkey-app __complete $words "$current" 2>/dev/null
+            end
+            complete -c valkey-app -f -a '(__valkey_app_complete)'
+            """#
+        default: return nil
+        }
+    }
+}
+
