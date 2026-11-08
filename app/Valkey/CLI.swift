@@ -183,7 +183,18 @@ enum CLI {
             for _ in 0..<600 where remotePort() != nil { usleep(100_000) }   // servers stop gracefully first
             output(inv, reply)
         default:
-            output(inv, try request(inv))
+            var reply = try request(inv)
+            // A settings change restarts a running server (`set`, `user …`); wait as `restart` does.
+            if let result = reply["result"] as? [String: Any],
+               result["state"] as? String == "stopping", let id = result["id"] as? String {
+                let pid = (result["pid"] as? Int).map(Int32.init)
+                let after = try wait(for: id, timeout: 30, what: "restart") {
+                    if $0.state == "failed" { throw Failure(message: "“\($0.name)” failed to restart: \($0.failure ?? "see its log").") }
+                    return $0.state == "stopped" || ($0.state == "running" && $0.pid != pid && portAcceptsConnections($0.port))
+                }
+                reply["result"] = encodeJSON(after)
+            }
+            output(inv, reply)
         }
     }
 
