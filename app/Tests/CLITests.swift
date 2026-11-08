@@ -117,6 +117,53 @@ check("table pads columns", CLI.table([["NAME", "PORT"], ["Cache", "6379"]]) == 
 let json = try! JSONSerialization.jsonObject(with: Data(#"{"b":true,"a":1,"l":["x","y"],"u":[{"name":"n","readOnly":false}],"z":null}"#.utf8))
 check("render", CLI.render(json) == ["a: 1", "b: yes", "l: x, y", "u:", "  - name: n", "    readOnly: no", "z: -"])
 
+// Real file tails: match the old semantics across chunk/UTF-8 boundaries and leave EOF for follow.
+let logURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+defer { try? FileManager.default.removeItem(at: logURL) }
+for text in ["", "\n", "a\n\n", "a\nb", "first\nÉRROR 🐱\nlast\n", String(repeating: "x", count: 200) + "\nend"] {
+    try! Data(text.utf8).write(to: logURL)
+    let handle = try! FileHandle(forReadingFrom: logURL)
+    for count in [0, 1, 2, 10] {
+        for filter in ["", "error", "érror", "missing", "x"] {
+            let expected = Array(CLI.lastLines(of: text, .max).filter {
+                filter.isEmpty || $0.localizedCaseInsensitiveContains(filter)
+            }.suffix(count))
+            check("chunked tail \(text.utf8.count) bytes, \(count), \(filter)",
+                  CLI.readLogTail(handle, lines: count, filter: filter, chunkSize: 3) == expected)
+            check("tail leaves EOF for follow", handle.offsetInFile == UInt64(text.utf8.count))
+        }
+    }
+    try! handle.close()
+}
+// A sparse large log must only need its small suffix for an ordinary tail.
+try! Data().write(to: logURL)
+let growingLog = try! FileHandle(forUpdating: logURL)
+growingLog.seek(toFileOffset: 1_000_000_000)
+growingLog.write(Data("\nready\nlast\n".utf8))
+check("large sparse log tail", CLI.readLogTail(growingLog, lines: 2) == ["ready", "last"])
+let writer = try! FileHandle(forWritingTo: logURL)
+writer.seekToEndOfFile()
+writer.write(Data("appended\n".utf8))
+try! writer.close()
+check("follow starts at captured EOF", String(decoding: growingLog.readDataToEndOfFile(), as: UTF8.self) == "appended\n")
+try! growingLog.close()
+
+// The actual default prompt destination must not contaminate JSON on stdout.
+let capturedOut = Pipe(), capturedError = Pipe()
+fflush(stdout)
+let savedOut = dup(STDOUT_FILENO), savedError = dup(STDERR_FILENO)
+dup2(capturedOut.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+dup2(capturedError.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
+CLI.writePrompt("Remove cache? [y/N] ")
+dup2(savedOut, STDOUT_FILENO)
+dup2(savedError, STDERR_FILENO)
+close(savedOut)
+close(savedError)
+try! capturedOut.fileHandleForWriting.close()
+try! capturedError.fileHandleForWriting.close()
+check("prompt keeps stdout clean", capturedOut.fileHandleForReading.readDataToEndOfFile().isEmpty)
+check("prompt goes to stderr", String(decoding: capturedError.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self) == "Remove cache? [y/N] ")
+
 // Shared setting rules
 check("memory sizes", ConfigRules.maxMemoryProblem("256mb") == nil && ConfigRules.maxMemoryProblem("2GB") == nil
       && ConfigRules.maxMemoryProblem("100") == nil && ConfigRules.maxMemoryProblem(nil) == nil)

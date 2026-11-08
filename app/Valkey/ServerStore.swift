@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 /// The list of servers, persisted in UserDefaults.
@@ -7,9 +8,10 @@ final class ServerStore: ObservableObject {
 
     @Published private(set) var servers: [ValkeyServer] = []
     private let defaultsKey = "servers"
+    private let defaults: UserDefaults
 
-    private init() {
-        let defaults = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         if let data = defaults.data(forKey: defaultsKey) {
             do {
                 servers = try JSONDecoder().decode([ValkeyServer.Config].self, from: data).map {
@@ -37,7 +39,7 @@ final class ServerStore: ObservableObject {
             return NSLog("Valkey: couldn't encode servers; not saving")
         }
         servers.forEach { $0.config.saveSecrets() }
-        UserDefaults.standard.set(data, forKey: defaultsKey)
+        defaults.set(data, forKey: defaultsKey)
     }
 
     func server(id: UUID?) -> ValkeyServer? {
@@ -115,6 +117,27 @@ final class ServerStore: ObservableObject {
             try await versions.install(entry)
         }
         for module in modulesToInstall(for: config) { try await versions.install(module) }
+    }
+
+    /// Validate both sides of downloads, then save without suspending again. An edit's snapshot
+    /// also protects against concurrent UI/CLI edits and deletion while the registry loads.
+    @discardableResult
+    func commit(_ config: ValkeyServer.Config, original: ValkeyServer.Config?) async throws -> ValkeyServer {
+        func validate() throws {
+            if let original, let problem = ConfigRules.editProblem(original: original, current: server(id: original.id)?.config) {
+                throw CLI.Failure(message: problem)
+            }
+            if let problem = problem(with: config) { throw CLI.Failure(message: problem) }
+        }
+        try validate()
+        try await installRequirements(for: config)
+        try validate()
+        if let original, let server = server(id: original.id) {
+            server.config = config
+            return server
+        }
+        add(config)
+        return server(id: config.id)!
     }
 
     func add(_ config: ValkeyServer.Config) {

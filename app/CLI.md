@@ -34,6 +34,12 @@ Tests: `scripts/test-cli.sh`; they check that every command and option is docume
   it. `cli` passes the password to valkey-cli in `REDISCLI_AUTH`, never on the command line.
 - `--password -` reads the password from stdin. `--password ""` removes it.
 - Exit codes: 0 ok, 1 failed, 2 usage, 3 not found / ambiguous, 4 Valkey.app unreachable.
+- Saves detect concurrent edits or deletion while waiting and fail with a retry message instead of
+  overwriting newer settings. The UI uses the same save checks; port and directory conflicts are
+  checked again after downloads.
+- Confirmation prompts go to stderr, keeping `--json` stdout clean even when stdin is a terminal.
+- Log tails scan backward in chunks, stopping after enough matching lines; memory depends on the
+  requested output and the longest scanned line, rather than the entire log.
 - Long operations (downloads, `stats`) run as jobs in the app. The CLI waits for them to finish.
 - `start` / `restart` wait until the port accepts connections, and `stop` waits until the process has
   exited. Each fails with the server's error.
@@ -107,7 +113,7 @@ with a reason (see AGENTS.md).
 | Modules list with status (Installed / Downloads … when you save / Not available) | `modules` in `show` (`status`, `version`) |
 | Module remove (−) | `set <server> --disable-module NAME` (or `--modules a,b|none`) |
 | **Add Module…** | `set <server> --enable-module NAME` |
-| Validation messages (port in use, bad size, users, module not available, …) | same messages as errors (exit 1) |
+| Validation messages (port in use, bad size, users, module not available, concurrent edit/deletion, …) | shared save checks; same messages as errors (exit 1); rechecked after downloads |
 | Download progress on Save / Create | the CLI waits; `installing` in `versions` / `modules` |
 | "Loading available versions…" / registry error + **Retry** | `versions refresh`; `registryError` in `app` |
 | Warnings (upgrade can't be undone; data may need a removed module) | excluded: the CLI applies the change you asked for; the rules that block invalid changes are the same as the UI's |

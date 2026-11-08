@@ -3,6 +3,13 @@ import Foundation
 /// Server-setting rules shared by Server Settings and `valkey-app set`/`create`, so both accept the
 /// same values. Foundation-only so Tests/CLITests.swift can compile it standalone.
 enum ConfigRules {
+    /// An edit must still refer to the snapshot it started from after asynchronous work.
+    static func editProblem<T: Equatable>(original: T, current: T?) -> String? {
+        guard let current else { return "This server was deleted while saving. Reload the server list and retry." }
+        guard current == original else { return "This server changed while saving. Reload its settings and retry." }
+        return nil
+    }
+
     static let evictionPolicies = ["noeviction", "allkeys-lru", "allkeys-lfu", "allkeys-random",
                                    "volatile-lru", "volatile-lfu", "volatile-random", "volatile-ttl"]
 
