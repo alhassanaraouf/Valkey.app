@@ -258,10 +258,10 @@ enum CLIServer {
             if let v = o["--auto-update"].flatMap(ConfigRules.bool) { Updater.shared.automaticallyChecksForUpdates = v }
             if let v = o["--open-at-login"].flatMap(ConfigRules.bool) { try LoginItem.set(v) }
             return ok(appInfo(), "Updated app settings.")
-        case "app link-cli":
+        case "app install-cli":
             guard let newest = versions.installed.first else { throw CLI.Failure(message: "No Valkey version is installed.") }
             try CLITools.install(version: newest)
-            return ok(appInfo(), "\(CLITools.status). Add this to your shell profile: \(CLITools.pathLine)")
+            return ok(appInfo(), "valkey-cli and valkey-app are in \(CLITools.binDir): \(CLITools.status).")
         case "app check-updates":
             Updater.shared.checkForUpdates()
             return ok(appInfo(), "Opened the update check in Valkey.app; it continues in its window.")
@@ -400,7 +400,6 @@ enum CLIServer {
         var registryURL: String
         var registryError: String?
         var valkeyCLILink: String
-        var valkeyCLIPathLine: String
     }
 
     private static func appInfo() -> AppInfo {
@@ -419,6 +418,6 @@ enum CLIServer {
                       name: FileManager.default.displayName(atPath: $0.path).replacingOccurrences(of: ".app", with: ""))
             },
             registryURL: VersionStore.defaultRegistryURL.absoluteString, registryError: VersionStore.shared.registryError,
-            valkeyCLILink: CLITools.status, valkeyCLIPathLine: CLITools.pathLine)
+            valkeyCLILink: CLITools.status)
     }
 }

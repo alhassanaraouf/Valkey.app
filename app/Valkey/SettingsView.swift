@@ -61,23 +61,97 @@ enum TerminalApps {
     }
 }
 
-/// A `valkey-cli` symlink in a folder the user can put on PATH; it points at the newest installed version.
+/// `valkey-cli` and `valkey-app` in /usr/local/bin, which every shell has on PATH (/etc/paths), plus
+/// tab completion. Everything installed outside Application Support is a symlink into it:
+/// /usr/local/bin/valkey-cli → Valkey/bin/valkey-cli → the newest installed version, and each shell's
+/// completion file → Valkey/completions/…, so relinking after an upgrade needs no admin password.
 @MainActor enum CLITools {
     static let dir = ValkeyServer.rootDir.appendingPathComponent("bin", isDirectory: true)
-    static let pathLine = #"export PATH="$HOME/Library/Application Support/Valkey/bin:$PATH""#
-    private static var link: URL { dir.appendingPathComponent("valkey-cli") }
-
-    static var status: String {
-        guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: link.path) else { return "Not installed" }
-        guard FileManager.default.isExecutableFile(atPath: target) else { return "Out of date: that version was removed" }
-        return "Linked to Valkey " + URL(fileURLWithPath: target).deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
+    static let binDir = "/usr/local/bin"
+    private static let completions = ValkeyServer.rootDir.appendingPathComponent("completions", isDirectory: true)
+    private static var versionLink: URL { dir.appendingPathComponent("valkey-cli") }
+    /// Links that need /usr/local (maybe an admin password) and what each points at. macOS's zsh
+    /// already has /usr/local/share/zsh/site-functions on its fpath.
+    private static var links: [(path: String, target: String)] {
+        [("\(binDir)/valkey-cli", versionLink.path),
+         ("\(binDir)/valkey-app", Bundle.main.executablePath ?? "/Applications/Valkey.app/Contents/MacOS/Valkey"),
+         ("/usr/local/share/zsh/site-functions/_valkey-app", completions.appendingPathComponent("_valkey-app").path)]
+    }
+    /// Per-user completion links, made only for shells that would load them.
+    private static var userLinks: [(path: String, target: String)] {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path, fm = FileManager.default
+        var result: [(String, String)] = []
+        if ["/opt/homebrew/bin/fish", "/usr/local/bin/fish", "\(home)/.config/fish"].contains(where: fm.fileExists) {
+            result.append(("\(home)/.config/fish/completions/valkey-app.fish", completions.appendingPathComponent("valkey-app.fish").path))
+        }
+        if ["/opt/homebrew/etc/profile.d/bash_completion.sh", "/usr/local/etc/profile.d/bash_completion.sh"].contains(where: fm.fileExists) {
+            result.append(("\(home)/.local/share/bash-completion/completions/valkey-app", completions.appendingPathComponent("valkey-app.bash").path))
+        }
+        return result
     }
 
+    /// A symlink Valkey.app made (from any copy of the app), safe to replace.
+    private static func isOurs(_ path: String) -> Bool {
+        guard let points = try? FileManager.default.destinationOfSymbolicLink(atPath: path) else { return false }
+        return points.hasPrefix(ValkeyServer.rootDir.path) || points.hasSuffix(".app/Contents/MacOS/Valkey")
+    }
+
+    static var status: String {
+        let fm = FileManager.default
+        guard let target = try? fm.destinationOfSymbolicLink(atPath: versionLink.path),
+              links.allSatisfy({ (try? fm.destinationOfSymbolicLink(atPath: $0.path)) == $0.target }) else { return "Not installed" }
+        guard fm.isExecutableFile(atPath: target) else { return "Out of date: that version was removed" }
+        return "Installed (Valkey " + URL(fileURLWithPath: target).deletingLastPathComponent().deletingLastPathComponent().lastPathComponent + ")"
+    }
+
+    static var isInstalled: Bool { status != "Not installed" }
+
+    /// Points valkey-cli at `version`, puts valkey-cli and valkey-app on PATH and sets up tab completion,
+    /// asking for an admin password if /usr/local isn't writable. Refuses to replace files it didn't create.
     static func install(version: String) throws {
         let fm = FileManager.default
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        try? fm.removeItem(at: link)
-        try fm.createSymbolicLink(at: link, withDestinationURL: VersionStore.shared.binary("valkey-cli", version: version))
+        try? fm.removeItem(at: versionLink)
+        try fm.createSymbolicLink(at: versionLink, withDestinationURL: VersionStore.shared.binary("valkey-cli", version: version))
+        // Rewritten on every install so they match this version of the app.
+        try fm.createDirectory(at: completions, withIntermediateDirectories: true)
+        for (shell, file) in [("zsh", "_valkey-app"), ("bash", "valkey-app.bash"), ("fish", "valkey-app.fish")] {
+            try (CLI.completionScript(for: shell)! + "\n").write(to: completions.appendingPathComponent(file), atomically: true, encoding: .utf8)
+        }
+
+        // Anything already there that we didn't make (e.g. Homebrew's valkey-cli) is left alone.
+        func exists(_ path: String) -> Bool { fm.fileExists(atPath: path) || (try? fm.destinationOfSymbolicLink(atPath: path)) != nil }
+        let missing = links.filter { (try? fm.destinationOfSymbolicLink(atPath: $0.path)) != $0.target }
+        for link in missing + userLinks where exists(link.path) && !isOurs(link.path) {
+            throw CLI.Failure(message: "\(link.path) already exists and wasn't made by Valkey.app. Remove it, then try again.")
+        }
+        for link in userLinks {
+            try fm.createDirectory(atPath: (link.path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            try? fm.removeItem(atPath: link.path)
+            try fm.createSymbolicLink(atPath: link.path, withDestinationPath: link.target)
+        }
+        guard !missing.isEmpty else { return }
+        func quoted(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+        let dirs = Set(missing.map { ($0.path as NSString).deletingLastPathComponent }).sorted()
+        let script = (dirs.map { "mkdir -p \(quoted($0))" } + missing.map { "ln -sfn \(quoted($0.target)) \(quoted($0.path))" })
+            .joined(separator: " && ")
+        if run("/bin/sh", ["-c", script]) == 0 { return }
+        // Not writable (or missing): the same commands, through the system's admin password prompt.
+        let apple = "do shell script \"\(script.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\" with administrator privileges"
+        guard run("/usr/bin/osascript", ["-e", apple]) == 0 else {
+            throw CLI.Failure(message: "Couldn't add valkey-cli and valkey-app to \(binDir) (cancelled or not allowed).")
+        }
+    }
+
+    private static func run(_ tool: String, _ args: [String]) -> Int32 {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: tool)
+        p.arguments = args
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return -1 }
+        p.waitUntilExit()
+        return p.terminationStatus
     }
 }
 
@@ -115,7 +189,7 @@ struct SettingsView: View {
                 HStack {
                     Text(cliStatus).foregroundColor(.secondary)
                     Spacer()
-                    Button(cliStatus == "Not installed" ? "Install valkey-cli" : "Relink to Newest") {
+                    Button(CLITools.isInstalled ? "Relink to Newest" : "Install CLI") {
                         do {
                             try CLITools.install(version: VersionStore.shared.installed.first ?? "")
                             cliError = nil
@@ -125,16 +199,8 @@ struct SettingsView: View {
                     .disabled(VersionStore.shared.installed.isEmpty)
                 }
                 if let cliError { Text(cliError).font(.callout).foregroundColor(.red) }
-                Text("Then add this line to your shell profile (~/.zshrc) and open a new terminal:")
+                Text("Adds valkey-cli and valkey-app to \(CLITools.binDir), so they work in any terminal, with tab completion for zsh, bash and fish.")
                     .font(.caption).foregroundColor(.secondary)
-                HStack {
-                    Text(CLITools.pathLine).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-                    Spacer()
-                    Button("Copy") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(CLITools.pathLine, forType: .string)
-                    }
-                }
             }
 
             Section("Updates") {

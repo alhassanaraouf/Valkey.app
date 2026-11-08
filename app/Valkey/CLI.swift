@@ -17,7 +17,8 @@ enum CLI {
         guard let first = arguments.first else { return false }
         if (first as NSString).lastPathComponent == name { return true }
         guard arguments.count > 1 else { return false }
-        return specs.contains { $0.name.split(separator: " ")[0] == arguments[1] } || ["-h", "--help", "--version"].contains(arguments[1])
+        return (specs.map(\.name) + aliases.keys).contains { $0.split(separator: " ")[0] == arguments[1] }
+            || ["-h", "--help", "--version"].contains(arguments[1])
     }
 
     // MARK: Shapes shared with the app (the --json schema; see app/CLI.md)
@@ -87,11 +88,24 @@ enum CLI {
                 print("\(name) \(plist?["CFBundleShortVersionString"] as? String ?? "(not in an app bundle)")")
                 return 0
             }
+            if arguments.first == "__complete" {   // hidden: called by the completion scripts on Tab
+                for (word, help) in completions(for: Array(arguments.dropFirst()), servers: savedServers()) {
+                    print(help.isEmpty ? word : "\(word)\t\(help)")
+                }
+                return 0
+            }
             var inv = try parse(arguments)
             json = inv.json
             if inv.command == "help" {
                 if json { printJSON(inv.args.isEmpty ? specs : specs.filter { $0.name == inv.args[0] }) }
                 else { print(inv.args.isEmpty ? overview : help(for: spec(inv.args[0])!)) }
+                return 0
+            }
+            if inv.command == "completion" {
+                guard let script = completionScript(for: inv.args[0]) else {
+                    throw Failure(message: "Unknown shell “\(inv.args[0])”; use bash, zsh or fish.", code: Failure.usage)
+                }
+                print(script)
                 return 0
             }
             try prepare(&inv)
@@ -264,7 +278,10 @@ enum CLI {
         return app.pathExtension == "app" ? app : nil
     }
 
-    private static func runOpen(hidden: Bool) throws {
+    /// Opens the app and waits (up to 15 s) until it accepts commands, which it does once it has
+    /// finished launching; the first launch of a new copy can take seconds while macOS checks it.
+    @discardableResult
+    private static func runOpen(hidden: Bool) throws -> CFMessagePort {
         let open = Process()
         open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         open.arguments = (hidden ? ["-g", "-j"] : []) + (appBundle.map { [$0.path] } ?? ["-b", "app.valkey.Valkey"])
@@ -273,16 +290,6 @@ enum CLI {
         guard open.terminationStatus == 0 else {
             throw Failure(message: "Couldn't open Valkey.app (is it installed?).", code: Failure.unreachable)
         }
-    }
-
-    /// The app's message port, launching the app hidden in the background if it isn't running.
-    private static func appPort() throws -> CFMessagePort {
-        if let port = cachedPort ?? remotePort() {
-            cachedPort = port
-            return port
-        }
-        FileHandle.standardError.write(Data("Starting Valkey.app…\n".utf8))
-        try runOpen(hidden: true)
         for _ in 0..<150 {
             if let port = remotePort() {
                 cachedPort = port
@@ -292,6 +299,16 @@ enum CLI {
         }
         throw Failure(message: "Couldn't reach Valkey.app. Open it once (it must be allowed to run on first launch), then retry.",
                       code: Failure.unreachable)
+    }
+
+    /// The app's message port, launching the app hidden in the background if it isn't running.
+    private static func appPort() throws -> CFMessagePort {
+        if let port = cachedPort ?? remotePort() {
+            cachedPort = port
+            return port
+        }
+        FileHandle.standardError.write(Data("Starting Valkey.app…\n".utf8))
+        return try runOpen(hidden: true)
     }
 
     /// True if something listens on 127.0.0.1:port.
