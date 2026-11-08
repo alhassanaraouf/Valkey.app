@@ -151,7 +151,7 @@ enum CLI {
                 guard isatty(STDIN_FILENO) != 0 else {
                     throw Failure(message: "delete needs --yes when not run interactively.", code: Failure.usage)
                 }
-                print("Remove “\(target.name)” (port \(target.port))? Its data directory is kept. [y/N] ", terminator: "")
+                writePrompt("Remove “\(target.name)” (port \(target.port))? Its data directory is kept. [y/N] ")
                 guard readLine()?.lowercased().hasPrefix("y") == true else { throw Failure(message: "Cancelled.") }
             }
             output(inv, try request(Invocation(command: "delete", args: [target.id])))
@@ -307,8 +307,8 @@ enum CLI {
             if follow { throw Failure(message: "No log yet at \(server.logFile).") }
             return json ? printJSON(LogOutput(logFile: server.logFile, lines: [])) : ()
         }
-        let all = lastLines(of: String(decoding: handle.readDataToEndOfFile(), as: UTF8.self), .max)
-        let tail = Array(all.filter(keep).suffix(lines))
+        defer { try? handle.close() }
+        let tail = readLogTail(handle, lines: lines, filter: filter)
         if json && !follow {
             return printJSON(LogOutput(logFile: server.logFile, lines: tail))
         }
@@ -316,19 +316,59 @@ enum CLI {
         tail.forEach(emit)
         guard follow else { return }
         setvbuf(stdout, nil, _IOLBF, 0)
-        var partial = ""
+        var partial = Data()
         while true {
-            let data = handle.readDataToEndOfFile()
+            let data = try handle.read(upToCount: 65_536) ?? Data()
             if data.isEmpty { usleep(250_000); continue }
-            var text = partial + String(decoding: data, as: UTF8.self)
-            if let end = text.lastIndex(of: "\n") {
-                partial = String(text[text.index(after: end)...])
-                text = String(text[..<end])
+            partial.append(data)
+            if let end = partial.lastIndex(of: 10) {
+                // Decode only complete lines, preserving UTF-8 split across reads.
+                let text = String(decoding: partial[..<end], as: UTF8.self)
                 text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).forEach(emit)
-            } else {
-                partial = text
+                partial = Data(partial[partial.index(after: end)...])
             }
         }
+    }
+
+    /// Prompts belong on stderr so redirected stdout remains machine-readable.
+    static func writePrompt(_ text: String, to handle: FileHandle = .standardError) {
+        handle.write(Data(text.utf8))
+    }
+
+    /// Scan backwards until enough matching lines have been found. Memory is bounded by the
+    /// requested output, a chunk and one line, even when the log has grown for months.
+    /// Leave the handle at the captured EOF so following doesn't lose subsequent writes.
+    static func readLogTail(_ handle: FileHandle, lines: Int, filter: String = "", chunkSize: Int = 65_536) -> [String] {
+        let end = handle.seekToEndOfFile()
+        defer { handle.seek(toFileOffset: end) }
+        guard lines > 0 else { return [] }
+        precondition(chunkSize > 0)
+        var offset = end
+        var reversedLine: [UInt8] = []
+        var result: [String] = []
+        var atEnd = true
+        func appendLine() {
+            let line = String(decoding: reversedLine.reversed(), as: UTF8.self)
+            if filter.isEmpty || line.localizedCaseInsensitiveContains(filter) { result.append(line) }
+            reversedLine.removeAll(keepingCapacity: true)
+        }
+        while offset > 0 {
+            let count = Int(min(offset, UInt64(chunkSize)))
+            offset -= UInt64(count)
+            handle.seek(toFileOffset: offset)
+            let data = handle.readData(ofLength: count)
+            for byte in data.reversed() {
+                if byte == 10 {
+                    if !atEnd { appendLine() }
+                    if result.count == lines { return result.reversed() }
+                } else {
+                    reversedLine.append(byte)
+                }
+                atEnd = false
+            }
+        }
+        if end > 0, result.count < lines { appendLine() }
+        return result.reversed()
     }
 
     /// The last `n` lines of `text`, without the trailing newline's empty line.

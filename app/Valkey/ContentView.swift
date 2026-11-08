@@ -58,12 +58,7 @@ struct ContentView: View {
         }
         .sheet(item: $sheet) { request in
             ServerSettingsView(request: request) { config in
-                if request.isNew {
-                    store.add(config)
-                    selection = config.id
-                } else {
-                    store.server(id: config.id)?.config = config
-                }
+                if request.isNew { selection = config.id }
             }
             .environmentObject(store)
             .environmentObject(versions)

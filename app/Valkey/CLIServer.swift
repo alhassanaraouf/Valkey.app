@@ -75,9 +75,10 @@ enum CLIServer {
         }
         func arg(_ i: Int) -> String { inv.args.indices.contains(i) ? inv.args[i] : "" }
         func save(_ config: ValkeyServer.Config, to server: ValkeyServer, _ message: String) -> Data {
-            job {
+            let original = server.config
+            return job {
                 try await loadRegistry()
-                return try await commit(config, to: server, message, secrets: secrets)
+                return try await commit(config, original: original, message, secrets: secrets)
             }
         }
 
@@ -101,7 +102,7 @@ enum CLIServer {
                 try apply(o, to: &config)
                 if o["--name"] == nil { config.name = "Valkey \(config.version)" }
                 config.dataDirectory = o["--data-dir"] ?? store.defaultDataDirectory(port: config.port)
-                return try await commit(config, to: nil, "Created “\(config.name)” on port \(config.port) (Valkey \(config.version)).",
+                return try await commit(config, original: nil, "Created “\(config.name)” on port \(config.port) (Valkey \(config.version)).",
                                         secrets: secrets)
             }
         case "set":
@@ -274,17 +275,10 @@ enum CLIServer {
     }
 
     /// Saves a config the way Server Settings does: check it, download what it needs, then apply it.
-    private static func commit(_ config: ValkeyServer.Config, to server: ValkeyServer?, _ message: String,
+    private static func commit(_ config: ValkeyServer.Config, original: ValkeyServer.Config?, _ message: String,
                                secrets: Bool) async throws -> Data {
-        let store = ServerStore.shared
-        if let problem = store.problem(with: config) { throw CLI.Failure(message: problem) }
-        try await store.installRequirements(for: config)
-        if let server {
-            server.config = config   // restarts a running server when needed, as in the UI
-            return ok(info(server, secrets: secrets), message)
-        }
-        store.add(config)
-        return ok(info(store.server(id: config.id)!, secrets: secrets), message)
+        let server = try await ServerStore.shared.commit(config, original: original)
+        return ok(info(server, secrets: secrets), message)
     }
 
     /// start() reports problems it finds up front (not installed, missing module) in `failure`.

@@ -9,6 +9,7 @@ struct ServerSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     let isNew: Bool
     let onSave: (ValkeyServer.Config) -> Void
+    private let originalConfig: ValkeyServer.Config
     private let originalVersion: String
     private let originalModules: [String]
     @State private var config: ValkeyServer.Config
@@ -21,6 +22,7 @@ struct ServerSettingsView: View {
     init(request: SheetRequest, onSave: @escaping (ValkeyServer.Config) -> Void) {
         isNew = request.isNew
         self.onSave = onSave
+        originalConfig = request.config
         originalVersion = request.config.version
         originalModules = request.config.enabledModules
         _config = State(initialValue: request.config)
@@ -216,7 +218,7 @@ struct ServerSettingsView: View {
         Task {
             defer { saving = false }
             do {
-                try await store.installRequirements(for: result)
+                try await store.commit(result, original: isNew ? nil : originalConfig)
                 onSave(result)
                 dismiss()
             } catch {
