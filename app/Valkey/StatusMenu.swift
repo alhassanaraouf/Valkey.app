@@ -12,8 +12,7 @@ struct StatusMenu: View {
         }
         Divider()
         Button("Open Valkey…") {
-            bringAppForward()
-            openWindow(id: "main")
+            showWindow { openWindow(id: "main") }
         }
         .onAppear { MainWindow.open = { openWindow(id: "main") } }
         settingsItem
@@ -30,18 +29,29 @@ struct StatusMenu: View {
             OpenSettingsButton()
         } else {
             Button("Settings…") {
-                bringAppForward()
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                showWindow { NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) }
             }
         }
     }
 }
 
-/// With no window open the app is menu-bar only and inactive, so a window opened from this menu
-/// would stay hidden behind other apps. Join the Dock and activate first.
-private func bringAppForward() {
+/// With no window open the app is menu-bar only and inactive. Opening a window then is unreliable: it
+/// stays behind other apps, and Settings sometimes doesn't open while the app is inactive. So join the
+/// Dock, open, activate, and if the window still isn't there once the menu has closed, open it again.
+/// (Activating first instead makes SwiftUI also open the main window.)
+private func showWindow(_ open: @escaping () -> Void) {
+    let titled = { NSApp.windows.filter { $0.isVisible && $0.styleMask.contains(.titled) } }
+    let before = Set(titled().map(ObjectIdentifier.init))
     NSApp.setActivationPolicy(.regular)
-    NSApp.activate(ignoringOtherApps: true)
+    open()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        NSApp.activate(ignoringOtherApps: true)
+        if titled().allSatisfy({ before.contains(ObjectIdentifier($0)) }) { open() }
+        DispatchQueue.main.async {
+            titled().last?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
 }
 
 /// SettingsLink can't activate the app first, so open Settings programmatically instead.
@@ -51,8 +61,7 @@ private struct OpenSettingsButton: View {
 
     var body: some View {
         Button("Settings…") {
-            bringAppForward()
-            openSettings()
+            showWindow { openSettings() }
         }
     }
 }
