@@ -13,7 +13,11 @@ xcodebuild -project Valkey.xcodeproj -configuration Release -scheme Valkey \
 APP="build/DerivedData/Build/Products/Release/Valkey.app"
 echo "→ App at: $APP"
 [ -d "$APP" ] || { echo "Valkey.app not found"; exit 1; }
-# Xcode signs the app and the embedded valkey binaries; just verify.
+# Xcode signs ad-hoc; releases re-sign with a stable identity (SIGN_IDENTITY, see sign-app.sh).
+if [ -n "${SIGN_IDENTITY:-}" ]; then
+  echo "→ Signing as $SIGN_IDENTITY..."
+  scripts/sign-app.sh "$APP" "$SIGN_IDENTITY" "${SIGN_KEYCHAIN:-}"
+fi
 codesign --verify --deep --strict --verbose=2 "$APP"
 
 echo "→ Creating zip..."

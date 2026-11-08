@@ -183,6 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                      forEventClass: AEEventClass(kCoreEventClass),
                                                      andEventID: AEEventID(kAEQuitApplication))
         CLIServer.listen()
+        Keychain.adoptItems { ServerStore.shared.servers.forEach { $0.config.saveSecrets() } }
         // Auto-start servers, plus any that were running before an update relaunched the app.
         let resume = Set(Updater.takeServersToResume())
         ServerStore.shared.servers
@@ -193,12 +194,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // In the Dock while a window is open; menu-bar only once they're all closed.
         let center = NotificationCenter.default
-        for name in [NSWindow.didBecomeKeyNotification, NSWindow.willCloseNotification,
-                     NSWindow.didMiniaturizeNotification, UserDefaults.didChangeNotification] {
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.willCloseNotification, NSWindow.didMiniaturizeNotification] {
             center.addObserver(forName: name, object: nil, queue: .main) { _ in
                 // After willClose the window is still visible, so check on the next pass.
                 DispatchQueue.main.async { Self.updateActivationPolicy() }
             }
+        }
+        // Defaults change constantly (SwiftUI writes some while opening a window), so they may only add the
+        // Dock icon (menu-bar icon turned off), never remove it: that raced with windows opened from the
+        // menu-bar menu, hiding them before they appeared.
+        center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
+            DispatchQueue.main.async { if NSApp.activationPolicy() != .regular { Self.updateActivationPolicy() } }
         }
     }
 

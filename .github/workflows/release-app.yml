@@ -38,6 +38,26 @@ jobs:
           [ "$BUILD" -gt "${LATEST:-0}" ] || { echo "CFBundleVersion $BUILD must be greater than $LATEST"; exit 1; }
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
 
+      # A stable self-signed identity, so macOS keeps Keychain access across updates (ad-hoc builds
+      # are identified by their hash and asked for the Keychain password after every update).
+      # The certificate is also in the maintainer's login keychain; never replace it.
+      - name: Import signing certificate
+        env:
+          P12: ${{ secrets.MACOS_SIGNING_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_SIGNING_P12_PASSWORD }}
+        run: |
+          [ -n "$P12" ] || { echo "MACOS_SIGNING_P12 is not set"; exit 1; }
+          KC="$RUNNER_TEMP/signing.keychain-db"; KC_PASS=$(openssl rand -hex 16)
+          security create-keychain -p "$KC_PASS" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KC_PASS" "$KC"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          security import "$RUNNER_TEMP/signing.p12" -k "$KC" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PASS" "$KC" >/dev/null
+          rm "$RUNNER_TEMP/signing.p12"
+          echo "SIGN_KEYCHAIN=$KC" >> "$GITHUB_ENV"
+          echo "SIGN_IDENTITY=Valkey.app Self-Signed" >> "$GITHUB_ENV"
+
       - name: Build DMG and zip
         run: app/scripts/create-dmg.sh
 
