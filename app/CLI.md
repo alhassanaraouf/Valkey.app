@@ -42,7 +42,8 @@ Tests: `scripts/test-cli.sh`; they check that every command and option is docume
   requested output and the longest scanned line, rather than the entire log.
 - Long operations (downloads, `stats`) run as jobs in the app. The CLI waits for them to finish.
 - `start` / `restart` wait until the port accepts connections, and `stop` waits until the process has
-  exited. Each fails with the server's error.
+  exited. Each fails with the server's error. `set` and `user …` wait the same way when the change
+  restarts a running server, so the result shows it `running` again.
 
 ## JSON shapes
 

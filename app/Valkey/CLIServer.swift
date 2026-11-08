@@ -266,8 +266,9 @@ enum CLIServer {
             Updater.shared.checkForUpdates()
             return ok(appInfo(), "Opened the update check in Valkey.app; it continues in its window.")
         case "app quit":
-            // Reply first; quitting stops every server gracefully, then exits.
-            DispatchQueue.main.async { AppDelegate.quitCompletely() }
+            // Reply first; quitting stops every server gracefully, then exits. Not DispatchQueue.main:
+            // .terminateLater would spin inside that block, and servers' exit handlers (queued on main) never run.
+            RunLoop.main.perform { AppDelegate.quitCompletely() }
             return ok(["ok": true], "Valkey.app is quitting; its servers are stopping.")
         default:
             throw CLI.Failure(message: "Unknown command \(inv.command). Update Valkey.app?", code: CLI.Failure.usage)
