@@ -50,6 +50,30 @@
         "x86_64"
       ],
       "file" : "libjson.dylib",
+      "id" : "json-1.1.0",
+      "minimumMacOS" : "13.0",
+      "name" : "json",
+      "published" : "2026-11-17",
+      "sha256" : "ed70c1e14690cc78a4e4ed6a8372007f954bd3ac02a2292a52e7872af0b8c3e9",
+      "size" : 388618,
+      "sourceCommit" : "b6644b78a8ae7fa62f70d4c8f750a388c0c2ca83",
+      "summary" : "Native JSON documents with JSONPath queries (JSON.SET, JSON.GET, …).",
+      "title" : "JSON",
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/module-json-1.1.0/json-1.1.0.tar.gz",
+      "valkey" : [
+        "8.0",
+        "8.1",
+        "9.0",
+        "9.1"
+      ],
+      "version" : "1.1.0"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "file" : "libjson.dylib",
       "id" : "json-1.0.3",
       "minimumMacOS" : "13.0",
       "name" : "json",
