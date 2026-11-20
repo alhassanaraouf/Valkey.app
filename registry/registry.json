@@ -201,6 +201,14 @@
     },
     {
       "minimumMacOS" : "13.0",
+      "published" : "2026-11-20",
+      "sha256" : "8ce0ddffdd33945e265eb2f2eada43a3b06f25d04d831da2c71f46885e8e3fe2",
+      "size" : 2243612,
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/valkey-7.2.16/valkey-7.2.16-macos-universal.tar.gz",
+      "version" : "7.2.16"
+    },
+    {
+      "minimumMacOS" : "13.0",
       "published" : "2026-11-17",
       "sha256" : "3d0f19d599864ceed4140caf49cc965803a099e0598ceeae636c9db8497476a8",
       "size" : 2237177,
