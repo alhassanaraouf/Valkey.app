@@ -35,6 +35,8 @@ jobs:
           "$RUNNER_TEMP/tools/bin/pip" install --quiet cmake ninja
           echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          # Newer runner images ship rustup without cargo on PATH.
+          dirname "$(rustup which cargo)" >> "$GITHUB_PATH"
 
       - name: Build, test and package
         run: registry/scripts/package-module.sh "$MODULE" "$VERSION"
