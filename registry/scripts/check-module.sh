@@ -39,7 +39,7 @@ start() {
 stop() { cli shutdown save >/dev/null; wait "$SERVER_PID" 2>/dev/null; SERVER_PID=; }
 
 start
-module_name=$(case "$NAME" in bloom) echo bf ;; *) echo "$NAME" ;; esac)
+module_name=$NAME; [ "$NAME" = bloom ] && module_name=bf
 cli MODULE LIST | grep -qx "$module_name" || fail "MODULE LIST doesn't list $module_name"
 case "$NAME" in
 json)
