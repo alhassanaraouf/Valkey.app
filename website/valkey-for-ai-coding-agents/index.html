@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Valkey for AI Coding Agents (Claude Code, Codex, Cursor)</title>
+  <meta name="description" content="Let Claude Code, Codex, Cursor and other AI coding agents create, start and inspect local Valkey servers on a Mac with the valkey-app CLI: --json output, stable keys, exit codes.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://valkey.app/valkey-for-ai-coding-agents/">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Valkey.app">
+  <meta property="og:url" content="https://valkey.app/valkey-for-ai-coding-agents/">
+  <meta property="og:title" content="A local Valkey server for AI coding agents on Mac">
+  <meta property="og:description" content="Let Claude Code, Codex, Cursor and other AI coding agents create, start and inspect local Valkey servers on a Mac with the valkey-app CLI: --json output, stable keys, exit codes.">
+  <meta property="og:image" content="https://valkey.app/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="A local Valkey server for AI coding agents on Mac">
+  <meta name="twitter:description" content="Let Claude Code, Codex, Cursor and other AI coding agents create, start and inspect local Valkey servers on a Mac with the valkey-app CLI: --json output, stable keys, exit codes.">
+  <meta name="twitter:image" content="https://valkey.app/og.jpg">
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://valkey.app/valkey-for-ai-coding-agents/#article",
+      "headline": "A local Valkey server for AI coding agents on Mac",
+      "description": "Let Claude Code, Codex, Cursor and other AI coding agents create, start and inspect local Valkey servers on a Mac with the valkey-app CLI: --json output, stable keys, exit codes.",
+      "url": "https://valkey.app/valkey-for-ai-coding-agents/",
+      "image": "https://valkey.app/og.jpg",
+      "datePublished": "2026-11-25",
+      "dateModified": "2026-11-25",
+      "inLanguage": "en",
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Valkey",
+          "sameAs": "https://valkey.io/"
+        },
+        {
+          "@type": "Thing",
+          "name": "AI coding agents"
+        }
+      ],
+      "publisher": {
+        "@id": "https://valkey.app/#website"
+      },
+      "author": {
+        "@type": "Person",
+        "@id": "https://alhassan.raoufs.me/#person",
+        "name": "Al-Hassan",
+        "url": "https://alhassan.raoufs.me"
+      },
+      "mainEntityOfPage": "https://valkey.app/valkey-for-ai-coding-agents/"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Valkey.app",
+          "item": "https://valkey.app/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Valkey for AI coding agents",
+          "item": "https://valkey.app/valkey-for-ai-coding-agents/"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+
+  <style>
+    :root { color-scheme: light dark; --fg: #1a2026; --muted: #5b6570; --bg: #fff; --card: #f4f6f8; --accent: #2f6fdb; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e8ecef; --muted: #9aa4ae; --bg: #15191d; --card: #1f252b; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+    main { max-width: 760px; margin: 0 auto; padding: 56px 24px 72px; }
+    nav { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    h1 { font-size: 38px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.02em; }
+    h2 { font-size: 24px; margin: 44px 0 12px; }
+    .lead { font-size: 19px; color: var(--muted); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+    pre { background: var(--card); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--card); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; }
+    .button { display: inline-block; background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+    footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
+    .credit { margin-top: 8px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <nav><a href="/">Valkey.app</a> › Valkey for AI coding agents</nav>
+
+  <h1>A local Valkey server for AI coding agents on Mac</h1>
+  <p class="lead">Coding agents like Claude Code, Codex and Cursor work through the terminal. When your project
+    needs <a href="https://valkey.io">Valkey</a> (or Redis), the agent has to find a server, start it, get its
+    URL and read its log when something breaks. Valkey.app's <code>valkey-app</code> command does all of that,
+    with JSON output an agent can rely on.</p>
+
+  <h2 id="setup">Set up the command</h2>
+  <p>Install <a href="/">Valkey.app</a>, then click Settings › Command Line › <strong>Install CLI</strong> (or run
+    the app's executable once: <code>/Applications/Valkey.app/Contents/MacOS/Valkey app install-cli</code>).
+    The Homebrew cask links <code>valkey-app</code> for you. If the app isn't running, any command starts it in
+    the background.</p>
+
+  <h2 id="discover">Everything is discoverable</h2>
+  <p>An agent doesn't need this page. It can read the whole command reference as JSON:</p>
+  <pre>valkey-app help --json          # every command, argument, option and example
+valkey-app help create          # one command, as text</pre>
+  <p>The CLI does everything the app's window does: servers, settings, ACL users, modules, versions and app
+    settings. That's a rule in the project
+    (<a href="https://github.com/alhassanaraouf/Valkey.app/blob/main/AGENTS.md">AGENTS.md</a>): anything added to
+    the app is added to the CLI in the same change.</p>
+
+  <h2 id="json">JSON output</h2>
+  <p>Add <code>--json</code> to any command. Keys are stable and sorted, and optional keys are left out when
+    they're not set (treat a missing key as <code>null</code>).</p>
+  <pre>valkey-app list --json
+valkey-app show myapp --json
+valkey-app url myapp --json
+# {
+#   "url" : "valkey://127.0.0.1:6390"
+# }</pre>
+  <p>A server has <code>id</code>, <code>name</code>, <code>version</code>, <code>port</code>, <code>state</code>
+    (<code>running</code>, <code>stopping</code>, <code>stopped</code> or <code>failed</code>), <code>failure</code>,
+    <code>modules</code>, <code>dataDirectory</code>, <code>configFile</code>, <code>logFile</code> and its settings.
+    The full list of shapes is in the
+    <a href="https://github.com/alhassanaraouf/Valkey.app/blob/main/app/CLI.md">CLI reference</a>.</p>
+
+  <h2 id="lifecycle">Create, start, debug</h2>
+  <pre>valkey-app create myapp --version 9.2.0 --port 6390 --json
+valkey-app start myapp --json
+valkey-app logs myapp -n 100 --filter error --json
+valkey-app stats myapp --json
+valkey-app cli myapp DBSIZE</pre>
+  <p><code>start</code> waits until the port accepts connections and <code>stop</code> waits until the process has
+    exited, so the next command never races the server. Downloads (a new version or module) finish before
+    the command returns. <code>delete</code> asks for confirmation on a terminal; agents must pass
+    <code>--yes</code>, and the data directory stays on disk either way.</p>
+
+  <h2 id="exit-codes">Exit codes and errors</h2>
+  <table>
+    <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>0</td><td>OK</td></tr>
+      <tr><td>1</td><td>Failed (for example, the port is in use)</td></tr>
+      <tr><td>2</td><td>Usage error (unknown command or option)</td></tr>
+      <tr><td>3</td><td>Not found, or a name shared by several servers</td></tr>
+      <tr><td>4</td><td>Valkey.app unreachable</td></tr>
+    </tbody>
+  </table>
+  <p>With <code>--json</code>, errors print <code>{"error": "…"}</code>, and confirmation prompts go to stderr, so
+    stdout stays parseable. Typos get a hint, such as <code>Unknown option --prot. Did you mean --port?</code></p>
+
+  <h2 id="secrets">Passwords stay hidden</h2>
+  <p>Passwords never appear in output unless you pass <code>--show-secrets</code>. <code>url</code> shows the
+    password as <code>****</code> without it. <code>cli</code> hands the password to <code>valkey-cli</code> in an
+    environment variable, never on the command line, and <code>--password -</code> reads a new password from
+    stdin. An agent can do its work without a password ever landing in its transcript.</p>
+
+  <h2 id="agents-md">Paste this into AGENTS.md or CLAUDE.md</h2>
+  <p>Change the server name, version and port to suit your project:</p>
+  <pre>## Local Valkey
+
+This project needs a local Valkey server (Redis-compatible). On macOS, use Valkey.app's `valkey-app` CLI:
+
+- Check for it: `valkey-app show myapp --json` (exit code 3 means it doesn't exist yet).
+- Create it once: `valkey-app create myapp --version 9.2.0 --port 6390`
+- Start it: `valkey-app start myapp` (waits until it accepts connections).
+- Connection URL: `valkey-app url myapp --json`. Use it as REDIS_URL; if a client only accepts
+  redis://, keep the host and port and change the scheme.
+- Debug: `valkey-app logs myapp -n 100 --json`, `valkey-app cli myapp &lt;command&gt;`.
+- Don't use --show-secrets, don't delete servers, and don't run FLUSHALL unless asked.
+- Full reference: `valkey-app help --json`.</pre>
+
+  <h2 id="compare">Compared with Homebrew and Docker</h2>
+  <p>An agent can drive <code>brew services</code> or <code>docker run</code> too. The difference is what it gets
+    back. <code>brew services</code> manages one Valkey version and has no per-server settings or structured
+    status. Docker has JSON (<code>docker inspect</code>), but needs Docker running, and the agent has to work out
+    ports, volumes and image tags itself. <code>valkey-app</code> gives every server a name, a fixed port and a
+    data directory, and answers in one JSON shape across every command.</p>
+  <p><a class="button" href="/download">Download Valkey.app</a></p>
+  <p>See also: <a href="/run-multiple-valkey-versions-on-mac/">a server per project, on different versions</a>.</p>
+
+  <footer>
+    <a href="/">Valkey.app</a> · <a href="/changelog/">Changelog</a> ·
+    <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
+    Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
+    <p class="credit">Guides: <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
+      <a href="/run-multiple-valkey-versions-on-mac/">Multiple versions</a> ·
+      <a href="/valkey-json-bloom-modules-on-mac/">JSON and Bloom</a> ·
+      <a href="/valkey-for-ai-coding-agents/">For AI agents</a> ·
+      <a href="/migrate-redis-to-valkey-on-mac/">Migrate from Redis</a></p>
+    <p class="credit">Made with <span role="img" aria-label="love">❤️</span> by
+      <a href="https://alhassan.raoufs.me" rel="author">Al-Hassan</a></p>
+  </footer>
+</main>
+  <!-- Cloudflare Web Analytics (cookieless). Auto-injection does not reach Workers static assets, so it is inline. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "4c9da5edb3b949359dd79d8c8ddeeb62"}'></script>
+</body>
+</html>

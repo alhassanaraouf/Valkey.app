@@ -84,7 +84,9 @@
           { "@type": "Question", "name": "Can I install Valkey.app with Homebrew?",
             "acceptedAnswer": { "@type": "Answer", "text": "Yes. Install the app as a cask with brew install --cask alhassanaraouf/tap/valkey, then allow it once (the app isn't notarized yet). This installs Valkey.app itself, not the valkey server formula." } },
           { "@type": "Question", "name": "Why does macOS say Valkey.app can't be verified?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15 and later, open System Settings, go to Privacy & Security and click Open Anyway; on macOS 13 and 14, Control-click the app and choose Open. Updates install without this step." } }
+            "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app isn't notarized by Apple yet, so macOS blocks its first launch. Allow it once: on macOS 15 and later, open System Settings, go to Privacy & Security and click Open Anyway; on macOS 13 and 14, Control-click the app and choose Open. Updates install without this step." } },
+          { "@type": "Question", "name": "Why isn't Valkey.app notarized?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Valkey.app is a free, open-source side project, and Apple only notarizes apps from members of its paid Developer Program. Joining is planned. Until then, macOS asks you to allow the app once on first launch. You can check what you install yourself: the source is public, release builds are made by GitHub Actions from the tagged commit, and every release lists SHA-256 checksums." } }
         ]
       }
     ]
@@ -130,8 +132,10 @@
     <h1>Valkey for macOS</h1>
     <p class="lead"><strong>Valkey.app</strong> is the easiest way to run <a href="https://valkey.io">Valkey</a> for macOS.</p>
     <a class="button" href="/download">Download for macOS</a>
-    <p class="note">Free · macOS 13 or later · Apple Silicon and Intel · <a href="#install">install steps</a> ·
+    <p class="note">Free · macOS 13 or later · Apple Silicon and Intel ·
       <a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest">release notes</a></p>
+    <p class="note">First launch: allow it once in Privacy &amp; Security. It takes 30 seconds.
+      <a href="#why-unsigned">Why?</a></p>
   </header>
 
   <p><strong>Valkey.app</strong> is Valkey for macOS: a free, native macOS app for running <a href="https://valkey.io">Valkey</a>,
@@ -144,8 +148,8 @@
   <ol class="steps">
     <li><a href="/download">Download Valkey.dmg</a>,
       open it, and drag <strong>Valkey.app</strong> into <strong>Applications</strong>.</li>
-    <li>Open Valkey.app from Applications. macOS blocks the first launch because Valkey.app isn't
-      notarized by Apple yet. Allow it once, as shown below.</li>
+    <li>Open Valkey.app from Applications. The first time, macOS asks you to confirm it, because the app
+      isn't notarized by Apple yet (<a href="#why-unsigned">why</a>). Allow it once, as shown below.</li>
     <li>Click <strong>Create Server…</strong>, pick a Valkey version, and it's downloaded and set up.
       From then on Valkey.app updates itself.</li>
   </ol>
@@ -160,11 +164,14 @@ xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
   <details open>
     <summary>Allow Valkey.app on macOS 15 Sequoia and later</summary>
     <ol class="steps">
-      <li>Open Valkey.app once. When macOS says it can't be verified, click <strong>Done</strong>.</li>
+      <li>Open Valkey.app once. macOS says it can't verify the app; click <strong>Done</strong>.</li>
       <li>Open <strong>System Settings → Privacy &amp; Security</strong> and scroll to <strong>Security</strong>.</li>
       <li>Next to “Valkey.app was blocked to protect your Mac”, click <strong>Open Anyway</strong>, then confirm with
         your password or Touch ID.</li>
     </ol>
+    <!-- TODO: screenshot of the "Open Anyway" button in System Settings › Privacy & Security (macOS 15).
+         Capture it on a Mac, save as website/open-anyway.png (about 1200px wide) and add an <img> here
+         with width/height and alt text. -->
   </details>
   <details>
     <summary>Allow Valkey.app on macOS 13 Ventura or 14 Sonoma</summary>
@@ -178,8 +185,37 @@ xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
     <p>This removes the download quarantine flag, so macOS won't block the first launch:</p>
     <pre>xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
   </details>
-  <p class="note">You only need to do this once. Updates and Valkey versions installed by the app aren't
-    blocked, and every download is checked against its published signature and checksum.</p>
+  <p class="note">You only do this once. Updates and the Valkey versions the app installs don't ask again,
+    and every download is checked against its published signature and checksum.</p>
+
+  <h2 id="why-unsigned">Why isn't it notarized?</h2>
+  <p>Valkey.app is a free, open-source side project. Apple only notarizes apps from members of its paid
+    Developer Program, and joining is planned. Until then, macOS asks you to allow the app once. You don't
+    have to take that on trust: everything below can be checked.</p>
+
+  <h2 id="verify">Verify it yourself</h2>
+  <ul>
+    <li><strong>Open source.</strong> All of the code is <a href="https://github.com/alhassanaraouf/Valkey.app">on
+      GitHub</a> under the Apache License 2.0.</li>
+    <li><strong>Built in the open.</strong> Release DMGs are built by GitHub Actions from the tagged commit,
+      by <a href="https://github.com/alhassanaraouf/Valkey.app/blob/main/.github/workflows/release-app.yml">this
+      workflow</a>, not on a personal machine.</li>
+    <li><strong>Checksums.</strong> Every <a href="https://github.com/alhassanaraouf/Valkey.app/releases/latest">release's
+      notes</a> list the SHA-256 of Valkey.dmg and Valkey.app.zip. Compare with:
+      <pre>shasum -a 256 ~/Downloads/Valkey.dmg</pre></li>
+    <li><strong>Build provenance.</strong> From the release after 1.5 on, GitHub signs an attestation that
+      the DMG came from that workflow. Check it with the GitHub CLI:
+      <pre>gh attestation verify Valkey.dmg -R alhassanaraouf/Valkey.app</pre></li>
+    <li><strong>Malware scan.</strong> Paste the DMG's SHA-256 into <a href="https://www.virustotal.com/">VirusTotal</a>
+      to see its scan. Newer release notes link the report directly.</li>
+    <li><strong>Code signature.</strong> From the release after 1.5 on, the app is signed with the same
+      self-signed identity every time, so macOS keeps its Keychain access across updates. It's not a
+      substitute for notarization, but you can see it with
+      <code>codesign -dv /Applications/Valkey.app</code>.</li>
+    <li><strong>Signed downloads.</strong> App updates are Ed25519-signed and checked before they install.
+      Valkey and module downloads are checked against the SHA-256s in the Ed25519-signed
+      <a href="/registry.json">registry.json</a>.</li>
+  </ul>
 
   <h2>Features</h2>
   <ul class="features">
@@ -190,6 +226,10 @@ xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
     <li><strong>Menu bar</strong>Start, stop and connect with <code>valkey-cli</code> from the menu bar.</li>
     <li><strong>Automatic updates</strong>See the release notes and confirm before anything is installed.</li>
   </ul>
+  <p><strong>Guides:</strong> <a href="/run-multiple-valkey-versions-on-mac/">run several Valkey versions</a> ·
+    <a href="/valkey-json-bloom-modules-on-mac/">JSON and Bloom modules</a> ·
+    <a href="/valkey-for-ai-coding-agents/">Valkey for AI coding agents</a> ·
+    <a href="/migrate-redis-to-valkey-on-mac/">move from Redis to Valkey</a></p>
 
   <h2 id="versions">Available Valkey versions</h2>
   <table>
@@ -235,13 +275,22 @@ xattr -dr com.apple.quarantine /Applications/Valkey.app</pre>
       and later, open System Settings, go to Privacy &amp; Security and click Open Anyway; on macOS 13 and 14,
       Control-click the app and choose Open. Updates install without this step.
       <a href="#install">Step-by-step instructions</a>.</p>
+    <h3>Why isn't Valkey.app notarized?</h3>
+    <p>Valkey.app is a free, open-source side project, and Apple only notarizes apps from members of its paid
+      Developer Program. Joining is planned. Until then, macOS asks you to allow the app once on first launch.
+      You can check what you install yourself: the source is public, release builds are made by GitHub Actions
+      from the tagged commit, and every release lists SHA-256 checksums. <a href="#verify">How to verify it</a>.</p>
   </div>
 
   <footer>
-    <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
-    <a href="/changelog/">Changelog</a> ·
+    <a href="/">Valkey.app</a> · <a href="/changelog/">Changelog</a> ·
     <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
     Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
+    <p class="credit">Guides: <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
+      <a href="/run-multiple-valkey-versions-on-mac/">Multiple versions</a> ·
+      <a href="/valkey-json-bloom-modules-on-mac/">JSON and Bloom</a> ·
+      <a href="/valkey-for-ai-coding-agents/">For AI agents</a> ·
+      <a href="/migrate-redis-to-valkey-on-mac/">Migrate from Redis</a></p>
     <p class="credit">Made with <span role="img" aria-label="love">❤️</span> by
       <a href="https://alhassan.raoufs.me" rel="author">Al-Hassan</a></p>
   </footer>

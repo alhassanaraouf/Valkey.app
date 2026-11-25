@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valkey JSON and Bloom Modules on Mac (No Docker)</title>
+  <meta name="description" content="Turn on the official Valkey JSON and Bloom modules per server on macOS, with JSON.SET, JSON.GET, BF.ADD and BF.EXISTS examples. No Docker or building from source.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://valkey.app/valkey-json-bloom-modules-on-mac/">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Valkey.app">
+  <meta property="og:url" content="https://valkey.app/valkey-json-bloom-modules-on-mac/">
+  <meta property="og:title" content="How to use the Valkey JSON and Bloom modules on Mac">
+  <meta property="og:description" content="Turn on the official Valkey JSON and Bloom modules per server on macOS, with JSON.SET, JSON.GET, BF.ADD and BF.EXISTS examples. No Docker or building from source.">
+  <meta property="og:image" content="https://valkey.app/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Valkey.app logo with the tagline: Run Valkey servers on your Mac.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to use the Valkey JSON and Bloom modules on Mac">
+  <meta name="twitter:description" content="Turn on the official Valkey JSON and Bloom modules per server on macOS, with JSON.SET, JSON.GET, BF.ADD and BF.EXISTS examples. No Docker or building from source.">
+  <meta name="twitter:image" content="https://valkey.app/og.jpg">
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "https://valkey.app/valkey-json-bloom-modules-on-mac/#article",
+      "headline": "How to use the Valkey JSON and Bloom modules on Mac",
+      "description": "Turn on the official Valkey JSON and Bloom modules per server on macOS, with JSON.SET, JSON.GET, BF.ADD and BF.EXISTS examples. No Docker or building from source.",
+      "url": "https://valkey.app/valkey-json-bloom-modules-on-mac/",
+      "image": "https://valkey.app/og.jpg",
+      "datePublished": "2026-11-25",
+      "dateModified": "2026-11-25",
+      "inLanguage": "en",
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Valkey",
+          "sameAs": "https://valkey.io/"
+        },
+        {
+          "@type": "Thing",
+          "name": "Valkey modules"
+        }
+      ],
+      "publisher": {
+        "@id": "https://valkey.app/#website"
+      },
+      "author": {
+        "@type": "Person",
+        "@id": "https://alhassan.raoufs.me/#person",
+        "name": "Al-Hassan",
+        "url": "https://alhassan.raoufs.me"
+      },
+      "mainEntityOfPage": "https://valkey.app/valkey-json-bloom-modules-on-mac/"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Valkey.app",
+          "item": "https://valkey.app/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "JSON and Bloom modules",
+          "item": "https://valkey.app/valkey-json-bloom-modules-on-mac/"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+
+  <style>
+    :root { color-scheme: light dark; --fg: #1a2026; --muted: #5b6570; --bg: #fff; --card: #f4f6f8; --accent: #2f6fdb; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e8ecef; --muted: #9aa4ae; --bg: #15191d; --card: #1f252b; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+    main { max-width: 760px; margin: 0 auto; padding: 56px 24px 72px; }
+    nav { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+    h1 { font-size: 38px; line-height: 1.2; margin: 0 0 12px; letter-spacing: -0.02em; }
+    h2 { font-size: 24px; margin: 44px 0 12px; }
+    .lead { font-size: 19px; color: var(--muted); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+    pre { background: var(--card); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--card); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; }
+    .button { display: inline-block; background: var(--accent); color: #fff; padding: 10px 22px; border-radius: 10px; text-decoration: none; font-weight: 600; }
+    footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
+    .credit { margin-top: 8px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <nav><a href="/">Valkey.app</a> › JSON and Bloom modules</nav>
+
+  <h1>How to use the Valkey JSON and Bloom modules on Mac</h1>
+  <p class="lead"><a href="https://valkey.io">Valkey</a> has official modules for JSON documents and Bloom
+    filters. On Linux you'd load them from a package or a container. On a Mac, Valkey.app downloads a build
+    that matches your server's Valkey version and turns it on per server.</p>
+
+  <h2 id="what">What the modules do</h2>
+  <ul>
+    <li><strong>JSON</strong>: native JSON documents with JSONPath queries (<code>JSON.SET</code>,
+      <code>JSON.GET</code>, …). Read or update one field without fetching the whole document.</li>
+    <li><strong>Bloom</strong>: scalable Bloom filters for fast membership checks (<code>BF.ADD</code>,
+      <code>BF.EXISTS</code>, …). "Have I seen this before?" in a small, fixed amount of memory, with a
+      small chance of false positives and none of false negatives.</li>
+  </ul>
+  <p>Each module build is tested against the Valkey versions it's listed for. Right now JSON works with
+    Valkey 8.0 through 9.2 and Bloom with 8.0 through 9.1; neither is offered for 7.2. The
+    <a href="/#modules">modules table</a> on the home page is always current, or ask the app:</p>
+  <pre>valkey-app modules --valkey 9.1.4</pre>
+
+  <h2 id="app">Turn a module on in the app</h2>
+  <ol>
+    <li>Select a server and open <strong>Server Settings…</strong>.</li>
+    <li>Under Modules, click <strong>Add Module…</strong> and pick JSON or Bloom. Only modules that work with the
+      server's Valkey version are offered.</li>
+    <li>Click <strong>Save</strong>. The module is downloaded, checksum-verified, and the server restarts with it
+      if it was running.</li>
+  </ol>
+  <p>To turn a module off, remove it from the list with <strong>−</strong>. Data saved while a module was on
+    may need it to load, so keep it on for servers that store JSON or Bloom keys.</p>
+
+  <h2 id="cli">Or from Terminal</h2>
+  <p>With the <code>valkey-app</code> command (Settings › Command Line › <strong>Install CLI</strong>, or linked by
+    the Homebrew cask), create a server with JSON on from the start:</p>
+  <pre>valkey-app create docs --enable-module json
+valkey-app start docs</pre>
+  <p>Or add Bloom to a server you already have:</p>
+  <pre>valkey-app set docs --enable-module bloom</pre>
+  <p><code>valkey-app show docs</code> lists each module with its status (installed, will download, or not
+    available for that version). <code>--disable-module</code> turns one off, and
+    <code>--modules json,bloom</code> sets the whole list at once.</p>
+
+  <h2 id="json">Try JSON</h2>
+  <p><code>valkey-app cli</code> runs the server's own <code>valkey-cli</code>, already connected:</p>
+  <pre>valkey-app cli docs JSON.SET user:1 '$' '{"name":"Ada","langs":["swift","c"]}'
+# OK
+valkey-app cli docs JSON.GET user:1 '$.name'
+# "[\"Ada\"]"
+valkey-app cli docs JSON.ARRAPPEND user:1 '$.langs' '"rust"'
+valkey-app cli docs JSON.GET user:1 '$.langs'
+# "[[\"swift\",\"c\",\"rust\"]]"</pre>
+  <p>Paths starting with <code>$</code> are JSONPath, so results come back as a JSON array of matches.</p>
+
+  <h2 id="bloom">Try Bloom</h2>
+  <pre>valkey-app cli docs BF.ADD seen:emails ada@example.com
+# (integer) 1
+valkey-app cli docs BF.EXISTS seen:emails ada@example.com
+# (integer) 1
+valkey-app cli docs BF.EXISTS seen:emails bob@example.com
+# (integer) 0</pre>
+  <p>The filter is created with default settings on the first <code>BF.ADD</code>. Use <code>BF.RESERVE</code>
+    first if you want to set the error rate and capacity yourself.</p>
+
+  <h2 id="docker">The alternative: valkey-bundle in Docker</h2>
+  <p>The Valkey project publishes a <code>valkey/valkey-bundle</code> image with the official modules already
+    loaded:</p>
+  <pre>docker run -d --name valkey-bundle -p 6379:6379 valkey/valkey-bundle</pre>
+  <p>That works well if you already use Docker. Every server from the image gets every module in it, and
+    Valkey runs in a Linux VM. Homebrew's <code>valkey</code> formula doesn't include the modules, so you'd
+    build them yourself.</p>
+  <table>
+    <thead><tr><th></th><th>Valkey.app</th><th>valkey-bundle (Docker)</th><th>Homebrew</th></tr></thead>
+    <tbody>
+      <tr><td>JSON and Bloom</td><td>Per server, on or off</td><td>All modules, always</td><td>Build yourself</td></tr>
+      <tr><td>Matched to your Valkey version</td><td>Yes, automatically</td><td>Per image tag</td><td>Yourself</td></tr>
+      <tr><td>Extra software</td><td>None</td><td>Docker Desktop or similar</td><td>Homebrew, plus C++ and Rust toolchains</td></tr>
+    </tbody>
+  </table>
+  <p><a class="button" href="/download">Download Valkey.app</a></p>
+  <p>See also: <a href="/run-multiple-valkey-versions-on-mac/">running several Valkey versions side by side</a>.</p>
+
+  <footer>
+    <a href="/">Valkey.app</a> · <a href="/changelog/">Changelog</a> ·
+    <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
+    Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
+    <p class="credit">Guides: <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
+      <a href="/run-multiple-valkey-versions-on-mac/">Multiple versions</a> ·
+      <a href="/valkey-json-bloom-modules-on-mac/">JSON and Bloom</a> ·
+      <a href="/valkey-for-ai-coding-agents/">For AI agents</a> ·
+      <a href="/migrate-redis-to-valkey-on-mac/">Migrate from Redis</a></p>
+    <p class="credit">Made with <span role="img" aria-label="love">❤️</span> by
+      <a href="https://alhassan.raoufs.me" rel="author">Al-Hassan</a></p>
+  </footer>
+</main>
+  <!-- Cloudflare Web Analytics (cookieless). Auto-injection does not reach Workers static assets, so it is inline. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "4c9da5edb3b949359dd79d8c8ddeeb62"}'></script>
+</body>
+</html>

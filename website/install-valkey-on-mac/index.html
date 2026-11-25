@@ -42,7 +42,7 @@
         "url": "https://valkey.app/install-valkey-on-mac/",
         "image": "https://valkey.app/og.jpg",
         "datePublished": "2026-09-27",
-        "dateModified": "2026-09-27",
+        "dateModified": "2026-11-25",
         "inLanguage": "en",
         "about": [{ "@type": "Thing", "name": "Valkey", "sameAs": "https://valkey.io/" },
                   { "@type": "Thing", "name": "macOS" }],
@@ -96,9 +96,9 @@
     <thead><tr><th></th><th>Valkey.app</th><th>Homebrew</th><th>Docker</th><th>From source</th></tr></thead>
     <tbody>
       <tr><td>Terminal needed</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-      <tr><td>Several versions side by side</td><td>Yes</td><td>No</td><td>Yes</td><td>Manually</td></tr>
+      <tr><td>Several versions side by side</td><td>Yes (<a href="/run-multiple-valkey-versions-on-mac/">how</a>)</td><td>No</td><td>Yes</td><td>Manually</td></tr>
       <tr><td>Several servers at once</td><td>Yes, one click each</td><td>Manually</td><td>Yes</td><td>Manually</td></tr>
-      <tr><td>Modules (JSON, Bloom)</td><td>Built in</td><td>Build yourself</td><td>valkey-bundle image</td><td>Build yourself</td></tr>
+      <tr><td>Modules (JSON, Bloom)</td><td>Built in (<a href="/valkey-json-bloom-modules-on-mac/">how</a>)</td><td>Build yourself</td><td>valkey-bundle image</td><td>Build yourself</td></tr>
       <tr><td>Starts at login</td><td>Optional</td><td><code>brew services</code></td><td>With Docker</td><td>Manually</td></tr>
       <tr><td>Extra software</td><td>None</td><td>Homebrew</td><td>Docker Desktop or similar</td><td>Xcode tools</td></tr>
     </tbody>
@@ -113,15 +113,18 @@
   <ol>
     <li><a href="/download">Download Valkey.dmg</a>
       and drag Valkey.app into Applications.</li>
-    <li>Open it. The app isn't notarized yet, so allow it once:
-      <a href="/#install">step-by-step instructions</a>.</li>
+    <li>Open it, then allow it once in Privacy &amp; Security. It takes 30 seconds:
+      <a href="/#install">step-by-step instructions</a>. (<a href="/#why-unsigned">Why it isn't notarized yet</a>,
+      and <a href="/#verify">how to verify the download</a>.)</li>
     <li>Click <strong>Create Server…</strong>, pick a Valkey version, and click <strong>Start</strong>.</li>
   </ol>
   <p>Or install the app with Homebrew (this is the app, not the <code>valkey</code> server formula):</p>
   <pre>brew install --cask alhassanaraouf/tap/valkey
 xattr -dr com.apple.quarantine /Applications/Valkey.app   # allow it once</pre>
   <p>Each server gets its own port, version, data directory and live log. Use <strong>Connect…</strong> to open
-    <code>valkey-cli</code>, or add modules such as JSON and Bloom in Server Settings.</p>
+    <code>valkey-cli</code>, or add modules such as JSON and Bloom in Server Settings. Everything is also
+    scriptable with the <code>valkey-app</code> command, which has <code>--json</code> output for
+    <a href="/valkey-for-ai-coding-agents/">AI coding agents</a>.</p>
   <p><a class="button" href="/download">Download Valkey.app</a></p>
 
   <h2 id="homebrew">2. Homebrew</h2>
@@ -148,11 +151,18 @@ make
   <pre>valkey-cli ping
 # PONG</pre>
   <p>Valkey listens on port 6379 by default and speaks the Redis protocol, so <code>redis-cli</code>, Redis
-    client libraries and GUI tools that support Redis connect to it too.</p>
+    client libraries and GUI tools that support Redis connect to it too. Moving a project over? See
+    <a href="/migrate-redis-to-valkey-on-mac/">how to migrate from Redis to Valkey on Mac</a>.</p>
 
   <footer>
-    <a href="/">Valkey.app</a> · <a href="/changelog/">Changelog</a> · <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> ·
+    <a href="/">Valkey.app</a> · <a href="/changelog/">Changelog</a> ·
+    <a href="https://github.com/alhassanaraouf/Valkey.app">Source on GitHub</a> · Apache License 2.0 ·
     Valkey is a trademark of LF Projects, LLC. Valkey.app is an independent project.
+    <p class="credit">Guides: <a href="/install-valkey-on-mac/">Install Valkey on Mac</a> ·
+      <a href="/run-multiple-valkey-versions-on-mac/">Multiple versions</a> ·
+      <a href="/valkey-json-bloom-modules-on-mac/">JSON and Bloom</a> ·
+      <a href="/valkey-for-ai-coding-agents/">For AI agents</a> ·
+      <a href="/migrate-redis-to-valkey-on-mac/">Migrate from Redis</a></p>
     <p class="credit">Made with <span role="img" aria-label="love">❤️</span> by
       <a href="https://alhassan.raoufs.me" rel="author">Al-Hassan</a></p>
   </footer>

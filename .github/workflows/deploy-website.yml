@@ -35,6 +35,9 @@ jobs:
       - name: Build site (check only; Cloudflare Workers Builds deploys)
         run: |
           ./scripts/build-site.sh
-          for f in _redirects index.html install-valkey-on-mac/index.html appcast.xml registry.json registry.json.sig sitemap.xml _headers; do
+          for f in _redirects index.html install-valkey-on-mac/index.html \
+                   run-multiple-valkey-versions-on-mac/index.html valkey-json-bloom-modules-on-mac/index.html \
+                   valkey-for-ai-coding-agents/index.html migrate-redis-to-valkey-on-mac/index.html \
+                   changelog/index.html appcast.xml registry.json registry.json.sig sitemap.xml _headers; do
             test -s "_site/$f" || { echo "missing _site/$f"; exit 1; }
           done
