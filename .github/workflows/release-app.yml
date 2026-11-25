@@ -18,6 +18,8 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+      id-token: write       # build provenance attestation (Sigstore certificate)
+      attestations: write   # store the attestation; verify with `gh attestation verify`
     env:
       VERSION: ${{ inputs.version }}
       GH_TOKEN: ${{ github.token }}
@@ -61,6 +63,30 @@ jobs:
       - name: Build DMG and zip
         run: app/scripts/create-dmg.sh
 
+      # Signed SLSA provenance: proves the DMG and zip were built by this workflow from this commit.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            app/build/Valkey.dmg
+            app/build/Valkey.app.zip
+
+      # Optional: with a VIRUSTOTAL_API_KEY secret, upload the DMG for scanning and link the report in the
+      # release notes. Without the secret it does nothing, and it can never fail the release.
+      - name: Submit DMG to VirusTotal
+        continue-on-error: true
+        timeout-minutes: 5
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          [ -n "$VIRUSTOTAL_API_KEY" ] || { echo "VIRUSTOTAL_API_KEY is not set; skipping"; exit 0; }
+          # The upload URL endpoint accepts files of any size (the plain /files endpoint stops at 32 MB).
+          UPLOAD_URL=$(curl -fsS --retry 3 -H "x-apikey: $VIRUSTOTAL_API_KEY" \
+            https://www.virustotal.com/api/v3/files/upload_url | python3 -c 'import json, sys; print(json.load(sys.stdin)["data"])')
+          curl -fsS --retry 3 -H "x-apikey: $VIRUSTOTAL_API_KEY" -F "file=@app/build/Valkey.dmg" "$UPLOAD_URL" > /dev/null
+          SHA=$(shasum -a 256 app/build/Valkey.dmg | cut -d' ' -f1)
+          echo "VIRUSTOTAL_URL=https://www.virustotal.com/gui/file/$SHA" >> "$GITHUB_ENV"
+
       - name: Publish GitHub release
         run: |
           {
@@ -75,6 +101,18 @@ jobs:
             echo '```'
             (cd app/build && shasum -a 256 Valkey.dmg Valkey.app.zip)
             echo '```'
+            echo
+            echo "## Verify"
+            echo
+            echo "Built by GitHub Actions from this release's commit. Check the build provenance with the [GitHub CLI](https://cli.github.com):"
+            echo
+            echo '```'
+            echo "gh attestation verify Valkey.dmg -R $REPO"
+            echo '```'
+            if [ -n "${VIRUSTOTAL_URL:-}" ]; then
+              echo
+              echo "VirusTotal scan of Valkey.dmg: $VIRUSTOTAL_URL"
+            fi
           } > release-body.md
           gh release create "app-v$VERSION" app/build/Valkey.dmg app/build/Valkey.app.zip \
             --title "Valkey.app $VERSION" --notes-file release-body.md --target "$GITHUB_SHA" --latest
