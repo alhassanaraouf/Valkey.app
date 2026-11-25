@@ -5,14 +5,15 @@
 #   registry/dist/modules/<id>.tar.gz   →  <module file>, LICENSE (+ notices)
 #   registry/dist/modules/<id>.json     →  metadata for `registry.swift add-module`
 #
-#   registry/scripts/package-module.sh <json|bloom> <module-version>
+#   registry/scripts/package-module.sh <json|bloom|search> <module-version>
 #
-# Needs cmake + ninja (json) or rustup with the x86_64-apple-darwin target (bloom).
+# Needs cmake + ninja (json, search) or rustup with the x86_64-apple-darwin target (bloom), and
+# Rosetta for search's x86_64 slice.
 # Adding a module: a recipe below, a build() case, and a check in check-module.sh.
 # Modules publish no source hashes; the source is the official repo at the release tag, and the
 # commit it resolved to is recorded in the metadata.
 set -euo pipefail
-NAME="${1:?usage: $0 <json|bloom> <module-version>}"
+NAME="${1:?usage: $0 <json|bloom|search> <module-version>}"
 VERSION="${2:?module version}"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || { echo "bad version: $VERSION"; exit 1; }
 REGISTRY="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,6 +39,12 @@ bloom)
     SUMMARY="Scalable Bloom filters for fast membership checks (BF.ADD, BF.EXISTS, …)."
     # The default build crashes Valkey 8.0 on first use; 8.0 needs its own build.
     VARIANTS=("bloom-$VERSION-valkey8.0|8.0|8.0|valkey_8_0" "bloom-$VERSION|8.1||") ;;
+search)
+    REPO=https://github.com/valkey-io/valkey-search.git
+    FILE=libsearch.dylib TITLE="Search" LICENSES="LICENSE THIRD_PARTY_NOTICES"
+    SUMMARY="Vector and full-text search over hashes and JSON (FT.CREATE, FT.SEARCH, …)."
+    # 1.3 needs Valkey 9.1 or newer.
+    VARIANTS=("search-$VERSION|9.1||") ;;
 *)
     echo "unknown module: $NAME"; exit 1 ;;
 esac
@@ -63,6 +70,21 @@ build() {
             ${option:+--features "$option"} >"$WORK/build-$arch-${option:-default}.log" 2>&1) \
             || { tail -20 "$WORK/build-$arch-${option:-default}.log" >&2; return 1; }
         echo "$WORK/target-${option:-default}/$triple/release/$FILE" ;;
+    search)
+        dir="$WORK/search-$arch"
+        if [ ! -d "$dir" ]; then
+            cp -R "$SRC" "$dir"
+            # gRPC (cluster coordination) defaults to the system OpenSSL, which the hermetic build can't
+            # see and the module mustn't link; use gRPC's bundled BoringSSL, linked in statically.
+            sed -i '' 's/-DgRPC_SSL_PROVIDER=package/-DgRPC_SSL_PROVIDER=module/' "$dir/submodules/CMakeLists.txt"
+        fi
+        # The build picks its CPU flags from the host CPU and builds ICU with autotools, so each slice
+        # builds natively: x86_64 under Rosetta. Unit tests are skipped.
+        (cd "$dir" && CMAKE_EXTRA_ARGS="-DBUILD_UNIT_TESTS=OFF" arch "-$arch" /bin/bash -e ./build.sh \
+            >"$WORK/build-$arch.log" 2>&1) || { tail -40 "$WORK/build-$arch.log" >&2; return 1; }
+        # Drop the debug info (well over 100 MB).
+        strip -x "$dir/.build-release/$FILE"
+        echo "$dir/.build-release/$FILE" ;;
     esac
 }
 

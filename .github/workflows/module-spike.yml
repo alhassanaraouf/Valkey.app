@@ -1,0 +1,128 @@
+# TEMPORARY (drop before merging): tests modules on macOS for the "Bloom on 9.2 + valkey-search" branch.
+# Builds and tests only; uploads workflow artifacts, never releases, and never touches the registry.
+name: Module spike
+
+on:
+  push:
+    branches: [modules/bloom-92-and-search]
+    paths: [registry/scripts/**, .github/workflows/module-spike.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  # Does the published bloom-1.0.1 build work on Valkey 9.2.0 (both slices)?
+  bloom-on-9-2:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Fetch published modules and Valkey builds
+        run: |
+          mkdir -p spike
+          python3 - registry/registry.json > spike/fetch.txt <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          for m in r["modules"]:
+              if m["id"] in ("bloom-1.0.1",): print(m["id"], m["url"], m["sha256"])
+          for v in r["versions"]:
+              if v["version"] in ("9.1.4", "9.2.0"): print("valkey-" + v["version"], v["url"], v["sha256"])
+          EOF
+          while read -r id url sha; do
+            curl -fsSL -o "spike/$id.tar.gz" "$url"
+            echo "$sha  spike/$id.tar.gz" | shasum -a 256 -c -
+            mkdir -p "spike/$id" && tar xzf "spike/$id.tar.gz" -C "spike/$id"
+          done < spike/fetch.txt
+          lipo -info spike/bloom-1.0.1/libvalkey_bloom.dylib
+          otool -L spike/bloom-1.0.1/libvalkey_bloom.dylib
+      - name: Check bloom-1.0.1 on 9.2.0 and 9.1.4
+        run: |
+          for v in 9.2.0 9.1.4; do
+            registry/scripts/check-module.sh bloom spike/bloom-1.0.1/libvalkey_bloom.dylib "spike/valkey-$v/bin"
+            # x86_64 slice, under Rosetta.
+            x86="spike/x86-$v" && mkdir -p "$x86"
+            for b in valkey-server valkey-cli; do
+              printf '#!/bin/sh\nexec arch -x86_64 %s "$@"\n' "$PWD/spike/valkey-$v/bin/$b" > "$x86/$b" && chmod +x "$x86/$b"
+            done
+            registry/scripts/check-module.sh bloom spike/bloom-1.0.1/libvalkey_bloom.dylib "$x86"
+          done
+
+  search:
+    runs-on: macos-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up build tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install --quiet cmake ninja
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+          sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize
+          clang --version | head -1
+      - name: Build, test and package valkey-search 1.3.0
+        run: |
+          start=$(date +%s)
+          registry/scripts/package-module.sh search 1.3.0
+          echo "total build+test: $(( ($(date +%s) - start) / 60 )) min"
+      - name: Build logs
+        if: always()
+        run: |
+          for f in registry/valkey-src/build/modules/search-1.3.0/build-*.log; do
+            echo "== $f ($(wc -l < "$f") lines)"; tail -30 "$f"
+          done
+      - name: Inspect artifact
+        run: |
+          D=registry/valkey-src/build/modules/search-1.3.0/stage-search-1.3.0
+          ls -l $D registry/dist/modules
+          lipo -info $D/libsearch.dylib
+          otool -L $D/libsearch.dylib
+          otool -l $D/libsearch.dylib | grep -A4 LC_BUILD_VERSION | grep -E 'minos|platform' | sort -u
+          cat registry/dist/modules/search-1.3.0.json
+      - name: With json-1.1.0, both slices; idle memory
+        run: |
+          D=$PWD/registry/valkey-src/build/modules/search-1.3.0/stage-search-1.3.0
+          mkdir -p spike
+          python3 - registry/registry.json > spike/fetch.txt <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          for m in r["modules"]:
+              if m["id"] == "json-1.1.0": print(m["id"], m["url"], m["sha256"])
+          EOF
+          read -r id url sha < spike/fetch.txt
+          curl -fsSL -o spike/json.tar.gz "$url"
+          echo "$sha  spike/json.tar.gz" | shasum -a 256 -c -
+          mkdir -p spike/json && tar xzf spike/json.tar.gz -C spike/json
+          for v in 9.1.4 9.2.0; do
+            BIN=$PWD/registry/valkey-src/build/modules/valkey-$v/bin
+            WITH_MODULE=$PWD/spike/json/libjson.dylib registry/scripts/check-module.sh search $D/libsearch.dylib "$BIN"
+            x86="$PWD/spike/x86-$v" && mkdir -p "$x86"
+            for b in valkey-server valkey-cli; do
+              printf '#!/bin/sh\nexec arch -x86_64 %s "$@"\n' "$BIN/$b" > "$x86/$b" && chmod +x "$x86/$b"
+            done
+            registry/scripts/check-module.sh search $D/libsearch.dylib "$x86"
+            WITH_MODULE=$PWD/spike/json/libjson.dylib registry/scripts/check-module.sh search $D/libsearch.dylib "$x86"
+          done
+          # Idle memory: plain server vs with search vs with search + json (arm64, Valkey 9.2.0).
+          BIN=$PWD/registry/valkey-src/build/modules/valkey-9.2.0/bin
+          measure() {
+            local port=$((30000 + RANDOM % 1000)) dir; dir=$(mktemp -d)
+            "$BIN/valkey-server" --port $port --dir "$dir" --save '' "$@" >"$dir/log" 2>&1 &
+            local pid=$!; sleep 5
+            echo "$* → rss $(( $(ps -o rss= -p $pid) / 1024 )) MB, threads $(ps -M -p $pid | tail -n +2 | wc -l | tr -d ' '), used_memory $("$BIN/valkey-cli" -p $port info memory | grep '^used_memory_human' | cut -d: -f2 | tr -d '\r')"
+            kill $pid; wait $pid 2>/dev/null
+          }
+          measure
+          measure --loadmodule $D/libsearch.dylib
+          measure --loadmodule $PWD/spike/json/libjson.dylib --loadmodule $D/libsearch.dylib
+          measure --loadmodule $PWD/spike/json/libjson.dylib
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: search-1.3.0-spike
+          retention-days: 14
+          path: |
+            registry/dist/modules/
+            registry/valkey-src/build/modules/search-1.3.0/build-*.log
