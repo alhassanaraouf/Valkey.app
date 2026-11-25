@@ -77,6 +77,10 @@ build() {
             # gRPC (cluster coordination) defaults to the system OpenSSL, which the hermetic build can't
             # see and the module mustn't link; use gRPC's bundled BoringSSL, linked in statically.
             sed -i '' 's/-DgRPC_SSL_PROVIDER=package/-DgRPC_SSL_PROVIDER=module/' "$dir/submodules/CMakeLists.txt"
+            # Formatting a double with std::to_chars needs macOS 13.3; snprintf prints these (integral,
+            # below 1e17) values identically.
+            perl -0pi -e 's/std::to_chars\(storage, storage \+ sizeof\(storage\), d,\s*std::chars_format::fixed, 0\)/std::to_chars_result{storage + snprintf(storage, sizeof(storage), "%.0f", d), std::errc()}/' \
+                "$dir/src/expr/value.cc"
         fi
         # The build picks its CPU flags from the host CPU and builds ICU with autotools, so each slice
         # builds natively: x86_64 under Rosetta. Unit tests are skipped.
