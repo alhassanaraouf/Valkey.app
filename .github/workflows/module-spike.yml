@@ -41,13 +41,13 @@ jobs:
       - name: Check bloom-1.0.1 on 9.2.0 and 9.1.4
         run: |
           for v in 9.2.0 9.1.4; do
-            registry/scripts/check-module.sh bloom spike/bloom-1.0.1/libvalkey_bloom.dylib "spike/valkey-$v/bin"
+            registry/scripts/check-module.sh bloom "$PWD/spike/bloom-1.0.1/libvalkey_bloom.dylib" "$PWD/spike/valkey-$v/bin"
             # x86_64 slice, under Rosetta.
-            x86="spike/x86-$v" && mkdir -p "$x86"
+            x86="$PWD/spike/x86-$v" && mkdir -p "$x86"
             for b in valkey-server valkey-cli; do
               printf '#!/bin/sh\nexec arch -x86_64 %s "$@"\n' "$PWD/spike/valkey-$v/bin/$b" > "$x86/$b" && chmod +x "$x86/$b"
             done
-            registry/scripts/check-module.sh bloom spike/bloom-1.0.1/libvalkey_bloom.dylib "$x86"
+            registry/scripts/check-module.sh bloom "$PWD/spike/bloom-1.0.1/libvalkey_bloom.dylib" "$x86"
           done
 
   search:
