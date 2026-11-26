@@ -12,6 +12,9 @@
 # Adding a module: a recipe below, a build() case, and a check in check-module.sh.
 # Modules publish no source hashes; the source is the official repo at the release tag, and the
 # commit it resolved to is recorded in the metadata.
+# REUSE_PUBLISHED=1: don't build; re-test the builds the registry already lists (verified against their
+# checksums) and write metadata for the lines they pass on, e.g. to list them for a new Valkey line.
+# The tarballs are the published ones, byte for byte.
 set -euo pipefail
 NAME="${1:?usage: $0 <json|bloom|search> <module-version>}"
 VERSION="${2:?module version}"
@@ -51,8 +54,10 @@ search)
 esac
 
 SRC="$WORK/src"
-[ -d "$SRC" ] || git clone -q -c advice.detachedHead=false --depth 1 --branch "$VERSION" "$REPO" "$SRC"
-COMMIT=$(git -C "$SRC" rev-parse HEAD)
+if [ -z "${REUSE_PUBLISHED:-}" ]; then
+    [ -d "$SRC" ] || git clone -q -c advice.detachedHead=false --depth 1 --branch "$VERSION" "$REPO" "$SRC"
+    COMMIT=$(git -C "$SRC" rev-parse HEAD)
+fi
 
 # Builds one architecture of one variant; prints the path of the built module.
 build() {
@@ -146,17 +151,30 @@ for variant in "${VARIANTS[@]}"; do
 
     STAGE="$WORK/stage-$ID"
     rm -rf "$STAGE" && mkdir -p "$STAGE"
-    slices=()
-    for arch in $ARCHS; do slices+=("$(build "$arch" "$OPTION")"); done
-    lipo -create "${slices[@]}" -output "$STAGE/$FILE"
-    codesign --force --sign - "$STAGE/$FILE"
-    for license in $LICENSES; do cp "$SRC/$license" "$STAGE/"; done
+    if [ -n "${REUSE_PUBLISHED:-}" ]; then
+        info=$(python3 - "$REGISTRY/registry.json" "$ID" <<'EOF'
+import json, sys
+m = next(m for m in json.load(open(sys.argv[1])).get("modules", []) if m["id"] == sys.argv[2])
+print(m["url"], m["sha256"], m.get("sourceCommit", ""))
+EOF
+        ) || { echo "$ID isn't in the registry; nothing to reuse"; exit 1; }
+        read -r url sha COMMIT <<<"$info"
+        curl -fsSL -o "$OUT/$ID.tar.gz" "$url"
+        echo "$sha  $OUT/$ID.tar.gz" | shasum -a 256 -c - >/dev/null
+        tar xzf "$OUT/$ID.tar.gz" -C "$STAGE"
+    else
+        slices=()
+        for arch in $ARCHS; do slices+=("$(build "$arch" "$OPTION")"); done
+        lipo -create "${slices[@]}" -output "$STAGE/$FILE"
+        codesign --force --sign - "$STAGE/$FILE"
+        for license in $LICENSES; do cp "$SRC/$license" "$STAGE/"; done
+    fi
 
     for line in "${SELECTED[@]}"; do
         "$REGISTRY/scripts/check-module.sh" "$NAME" "$STAGE/$FILE" "$(valkey_bin "$line")"
     done
 
-    COPYFILE_DISABLE=1 tar -czf "$OUT/$ID.tar.gz" -C "$STAGE" "$FILE" $LICENSES
+    [ -n "${REUSE_PUBLISHED:-}" ] || COPYFILE_DISABLE=1 tar -czf "$OUT/$ID.tar.gz" -C "$STAGE" "$FILE" $LICENSES
     python3 - "$OUT/$ID.json" <<EOF
 import json, sys
 json.dump({"id": "$ID", "name": "$NAME", "version": "$VERSION", "title": "$TITLE", "summary": "$SUMMARY",

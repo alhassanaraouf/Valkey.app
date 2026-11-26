@@ -13,6 +13,10 @@ on:
       version:
         description: Module version (its release tag, e.g. 1.0.3)
         required: true
+      reuse_published:
+        description: Don't rebuild; re-test the published builds and re-list them (e.g. for a new Valkey line)
+        type: boolean
+        default: false
 
 concurrency: registry
 
@@ -39,9 +43,13 @@ jobs:
           dirname "$(rustup which cargo)" >> "$GITHUB_PATH"
 
       - name: Build, test and package
+        env:
+          REUSE_PUBLISHED: ${{ inputs.reuse_published && '1' || '' }}
         run: registry/scripts/package-module.sh "$MODULE" "$VERSION"
 
+      # Reused builds are the release's own assets already.
       - name: Upload release assets
+        if: ${{ !inputs.reuse_published }}
         run: |
           TAG="module-$MODULE-$VERSION"
           gh release view "$TAG" >/dev/null 2>&1 ||

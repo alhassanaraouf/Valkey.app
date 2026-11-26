@@ -6,10 +6,12 @@
 
 - Runs on macOS 13 Ventura or later, Apple Silicon and Intel (universal binaries).
 - Several Valkey servers side by side, each with its own name, port, Valkey version, data directory and live log.
-- Valkey versions (7.2, 8.0, 8.1, 9.0, 9.1 and 9.2 lines) and official modules (JSON, Bloom) install from a signed
+- Valkey versions (7.2, 8.0, 8.1, 9.0, 9.1 and 9.2 lines) and official modules (JSON, Bloom, Search) install from a signed
   registry, so new releases arrive without an app update. Every download is verified against an Ed25519-signed
   list of SHA-256 checksums.
 - Modules are added per server and matched to the server's Valkey version.
+- Search module (vector and full-text, FT.*): Valkey 9.1 and 9.2 only; on macOS its index memory isn't counted in
+  Valkey's used_memory or maxmemory.
 - Menu-bar icon to start, stop and connect with valkey-cli; the app updates itself (with confirmation).
 - `valkey-app` command line with `--json` output: everything the UI does, scriptable by people and AI agents.
 - Not yet notarized by Apple (a free side project; Apple's paid developer account is planned). On first launch,
