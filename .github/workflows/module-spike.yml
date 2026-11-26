@@ -81,6 +81,8 @@ jobs:
           otool -L $D/libsearch.dylib
           otool -l $D/libsearch.dylib | grep -A4 LC_BUILD_VERSION | grep -E 'minos|platform' | sort -u
           cat registry/dist/modules/search-1.3.0.json
+          tar tzvf registry/dist/modules/search-1.3.0.tar.gz
+          grep '^====' $D/THIRD_PARTY_LICENSES
       - name: With json-1.1.0, both slices; idle memory
         run: |
           D=$PWD/registry/valkey-src/build/modules/search-1.3.0/stage-search-1.3.0
@@ -126,3 +128,68 @@ jobs:
           path: |
             registry/dist/modules/
             registry/valkey-src/build/modules/search-1.3.0/build-*.log
+
+  # The x86_64 slice on a real Intel Mac (the search job only runs it under Rosetta).
+  search-intel:
+    needs: search
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: search-1.3.0-spike
+          path: spike/artifact
+      - name: Check on Valkey 9.1.4 and 9.2.0, alone and with json-1.1.0
+        run: |
+          uname -m; sysctl -n machdep.cpu.brand_string
+          mkdir -p spike/search && tar xzf spike/artifact/dist/modules/search-1.3.0.tar.gz -C spike/search
+          python3 - registry/registry.json > spike/fetch.txt <<'EOF'
+          import json, sys
+          r = json.load(open(sys.argv[1]))
+          for m in r["modules"]:
+              if m["id"] == "json-1.1.0": print(m["id"], m["url"], m["sha256"])
+          for v in r["versions"]:
+              if v["version"] in ("9.1.4", "9.2.0"): print("valkey-" + v["version"], v["url"], v["sha256"])
+          EOF
+          while read -r id url sha; do
+            curl -fsSL -o "spike/$id.tar.gz" "$url"
+            echo "$sha  spike/$id.tar.gz" | shasum -a 256 -c -
+            mkdir -p "spike/$id" && tar xzf "spike/$id.tar.gz" -C "spike/$id"
+          done < spike/fetch.txt
+          for v in 9.1.4 9.2.0; do
+            registry/scripts/check-module.sh search "$PWD/spike/search/libsearch.dylib" "$PWD/spike/valkey-$v/bin"
+            WITH_MODULE=$PWD/spike/json-1.1.0/libjson.dylib \
+              registry/scripts/check-module.sh search "$PWD/spike/search/libsearch.dylib" "$PWD/spike/valkey-$v/bin"
+          done
+
+  # Upstream's unit tests on macOS (arm64), built with the same patches and hermetic setup as the recipe.
+  # Upstream's own macOS CI only builds them.
+  search-unit-tests:
+    runs-on: macos-latest
+    timeout-minutes: 300
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up build tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install --quiet cmake ninja
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      - name: Build and run unit tests
+        run: |
+          export CMAKE_TOOLCHAIN_FILE=$PWD/registry/scripts/hermetic.cmake
+          PATH=$(tr ':' '\n' <<<"$PATH" | grep -vE '^(/opt/homebrew|/usr/local)' | paste -sd: -)
+          git clone -q -c advice.detachedHead=false --depth 1 --branch 1.3.0 https://github.com/valkey-io/valkey-search.git vs
+          cd vs
+          sed -i '' 's/-DgRPC_SSL_PROVIDER=package/-DgRPC_SSL_PROVIDER=module/' submodules/CMakeLists.txt
+          perl -0pi -e 's/std::to_chars\(storage, storage \+ sizeof\(storage\), d,\s*std::chars_format::fixed, 0\)/std::to_chars_result{storage + snprintf(storage, sizeof(storage), "%.0f", d), std::errc()}/' src/expr/value.cc
+          ./build.sh --run-tests --test-errors-stdout > ../unit-tests.log 2>&1 || echo "build.sh exited $?"
+          grep -E "tests passed|FAILED|\(Failed\)|\(Timeout\)|\(SEGFAULT\)|error:" ../unit-tests.log | head -80
+          tail -5 ../unit-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: search-1.3.0-unit-tests
+          retention-days: 14
+          path: unit-tests.log

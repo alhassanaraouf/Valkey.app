@@ -41,9 +41,10 @@ bloom)
     VARIANTS=("bloom-$VERSION-valkey8.0|8.0|8.0|valkey_8_0" "bloom-$VERSION|8.1||") ;;
 search)
     REPO=https://github.com/valkey-io/valkey-search.git
-    FILE=libsearch.dylib TITLE="Search" LICENSES="LICENSE THIRD_PARTY_NOTICES"
+    FILE=libsearch.dylib TITLE="Search" LICENSES="LICENSE THIRD_PARTY_NOTICES THIRD_PARTY_LICENSES"
     SUMMARY="Vector and full-text search over hashes and JSON (FT.CREATE, FT.SEARCH, …)."
-    # 1.3 needs Valkey 9.1 or newer.
+    # 1.3 needs Valkey 9.1 or newer. On macOS the module allocates with the system allocator, not
+    # Valkey's (upstream disables that on Mach-O), so its memory is missing from used_memory/maxmemory.
     VARIANTS=("search-$VERSION|9.1||") ;;
 *)
     echo "unknown module: $NAME"; exit 1 ;;
@@ -88,6 +89,20 @@ build() {
             >"$WORK/build-$arch.log" 2>&1) || { tail -40 "$WORK/build-$arch.log" >&2; return 1; }
         # Drop the debug info (well over 100 MB).
         strip -x "$dir/.build-release/$FILE"
+        # The license texts of everything linked in statically: the libraries the module vendors, and
+        # gRPC with its bundled dependencies, which the build fetches. THIRD_PARTY_NOTICES only covers the
+        # former. Same sources for both slices, so writing it each time is fine.
+        local deps="$dir/.build-release/.deps" component f found
+        for component in "$dir"/third_party/{hdrhistogram_c,hnswlib,simsimd,snowball,icu} \
+            "$deps"/{highwayhash,googletest,grpc} "$deps"/grpc/third_party/{abseil-cpp,address_sorting,boringssl-with-bazel,cares/cares,protobuf,re2,upb,utf8_range,xxhash,zlib,envoy-api,googleapis,xds,protoc-gen-validate,opencensus-proto}; do
+            found=
+            for f in "$component"/{LICENSE,LICENSE.md,LICENSE.txt,COPYING,COPYING.txt,NOTICE,NOTICE.txt}; do
+                [ -f "$f" ] || continue
+                found=1
+                printf '\n==== %s ====\n\n' "${f#"$dir"/}"; cat "$f"
+            done
+            [ -n "$found" ] || echo "warning: no license file in ${component#"$dir"/}" >&2
+        done > "$SRC/THIRD_PARTY_LICENSES"
         echo "$dir/.build-release/$FILE" ;;
     esac
 }
