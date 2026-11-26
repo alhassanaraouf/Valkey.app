@@ -93,6 +93,28 @@
         "9.1"
       ],
       "version" : "1.0.3"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "file" : "libsearch.dylib",
+      "id" : "search-1.3.0",
+      "minimumMacOS" : "13.0",
+      "name" : "search",
+      "published" : "2026-11-26",
+      "sha256" : "1935cc8f23471edb4f040a0ff430d7290d5a6c24de6ee5086994a0dfe6b91004",
+      "size" : 38307272,
+      "sourceCommit" : "e2f980371afd0b3cb68aab5beefcf714f8c744f4",
+      "summary" : "Vector and full-text search over hashes and JSON (FT.CREATE, FT.SEARCH, …).",
+      "title" : "Search",
+      "url" : "https://github.com/alhassanaraouf/Valkey.app/releases/download/module-search-1.3.0/search-1.3.0.tar.gz",
+      "valkey" : [
+        "9.1",
+        "9.2"
+      ],
+      "version" : "1.3.0"
     }
   ],
   "schemaVersion" : 1,
