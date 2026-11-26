@@ -31,7 +31,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
     steps:
+      # Always main: a run queued behind another publish must start from the registry that run committed.
       - uses: actions/checkout@v5
+        with:
+          ref: main
 
       - name: Set up build tools
         run: |
