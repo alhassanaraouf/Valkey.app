@@ -91,10 +91,11 @@ build() {
         strip -x "$dir/.build-release/$FILE"
         # The license texts of everything linked in statically: the libraries the module vendors, and
         # gRPC with its bundled dependencies, which the build fetches. THIRD_PARTY_NOTICES only covers the
-        # former. Same sources for both slices, so writing it each time is fine.
+        # former. upb is protobuf's code, under its license. Same sources for both slices, so writing it
+        # each time is fine.
         local deps="$dir/.build-release/.deps" component f found
         for component in "$dir"/third_party/{hdrhistogram_c,hnswlib,simsimd,snowball,icu} \
-            "$deps"/{highwayhash,googletest,grpc} "$deps"/grpc/third_party/{abseil-cpp,address_sorting,boringssl-with-bazel,cares/cares,protobuf,re2,upb,utf8_range,xxhash,zlib,envoy-api,googleapis,xds,protoc-gen-validate,opencensus-proto}; do
+            "$deps"/{highwayhash,googletest,grpc} "$deps"/grpc/third_party/{abseil-cpp,address_sorting,boringssl-with-bazel,cares/cares,protobuf,re2,utf8_range,xxhash,zlib,envoy-api,googleapis,xds,protoc-gen-validate,opencensus-proto}; do
             found=
             for f in "$component"/{LICENSE,LICENSE.md,LICENSE.txt,COPYING,COPYING.txt,NOTICE,NOTICE.txt}; do
                 [ -f "$f" ] || continue
