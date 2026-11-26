@@ -5,14 +5,18 @@
 #   registry/dist/modules/<id>.tar.gz   →  <module file>, LICENSE (+ notices)
 #   registry/dist/modules/<id>.json     →  metadata for `registry.swift add-module`
 #
-#   registry/scripts/package-module.sh <json|bloom> <module-version>
+#   registry/scripts/package-module.sh <json|bloom|search> <module-version>
 #
-# Needs cmake + ninja (json) or rustup with the x86_64-apple-darwin target (bloom).
+# Needs cmake + ninja (json, search) or rustup with the x86_64-apple-darwin target (bloom), and
+# Rosetta for search's x86_64 slice.
 # Adding a module: a recipe below, a build() case, and a check in check-module.sh.
 # Modules publish no source hashes; the source is the official repo at the release tag, and the
 # commit it resolved to is recorded in the metadata.
+# REUSE_PUBLISHED=1: don't build; re-test the builds the registry already lists (verified against their
+# checksums) and write metadata for the lines they pass on, e.g. to list them for a new Valkey line.
+# The tarballs are the published ones, byte for byte.
 set -euo pipefail
-NAME="${1:?usage: $0 <json|bloom> <module-version>}"
+NAME="${1:?usage: $0 <json|bloom|search> <module-version>}"
 VERSION="${2:?module version}"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]] || { echo "bad version: $VERSION"; exit 1; }
 REGISTRY="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,13 +42,22 @@ bloom)
     SUMMARY="Scalable Bloom filters for fast membership checks (BF.ADD, BF.EXISTS, …)."
     # The default build crashes Valkey 8.0 on first use; 8.0 needs its own build.
     VARIANTS=("bloom-$VERSION-valkey8.0|8.0|8.0|valkey_8_0" "bloom-$VERSION|8.1||") ;;
+search)
+    REPO=https://github.com/valkey-io/valkey-search.git
+    FILE=libsearch.dylib TITLE="Search" LICENSES="LICENSE THIRD_PARTY_NOTICES THIRD_PARTY_LICENSES"
+    SUMMARY="Vector and full-text search over hashes and JSON (FT.CREATE, FT.SEARCH, …)."
+    # 1.3 needs Valkey 9.1 or newer. On macOS the module allocates with the system allocator, not
+    # Valkey's (upstream disables that on Mach-O), so its memory is missing from used_memory/maxmemory.
+    VARIANTS=("search-$VERSION|9.1||") ;;
 *)
     echo "unknown module: $NAME"; exit 1 ;;
 esac
 
 SRC="$WORK/src"
-[ -d "$SRC" ] || git clone -q -c advice.detachedHead=false --depth 1 --branch "$VERSION" "$REPO" "$SRC"
-COMMIT=$(git -C "$SRC" rev-parse HEAD)
+if [ -z "${REUSE_PUBLISHED:-}" ]; then
+    [ -d "$SRC" ] || git clone -q -c advice.detachedHead=false --depth 1 --branch "$VERSION" "$REPO" "$SRC"
+    COMMIT=$(git -C "$SRC" rev-parse HEAD)
+fi
 
 # Builds one architecture of one variant; prints the path of the built module.
 build() {
@@ -63,6 +76,40 @@ build() {
             ${option:+--features "$option"} >"$WORK/build-$arch-${option:-default}.log" 2>&1) \
             || { tail -20 "$WORK/build-$arch-${option:-default}.log" >&2; return 1; }
         echo "$WORK/target-${option:-default}/$triple/release/$FILE" ;;
+    search)
+        dir="$WORK/search-$arch"
+        if [ ! -d "$dir" ]; then
+            cp -R "$SRC" "$dir"
+            # gRPC (cluster coordination) defaults to the system OpenSSL, which the hermetic build can't
+            # see and the module mustn't link; use gRPC's bundled BoringSSL, linked in statically.
+            sed -i '' 's/-DgRPC_SSL_PROVIDER=package/-DgRPC_SSL_PROVIDER=module/' "$dir/submodules/CMakeLists.txt"
+            # Formatting a double with std::to_chars needs macOS 13.3; snprintf prints these (integral,
+            # below 1e17) values identically.
+            perl -0pi -e 's/std::to_chars\(storage, storage \+ sizeof\(storage\), d,\s*std::chars_format::fixed, 0\)/std::to_chars_result{storage + snprintf(storage, sizeof(storage), "%.0f", d), std::errc()}/' \
+                "$dir/src/expr/value.cc"
+        fi
+        # The build picks its CPU flags from the host CPU and builds ICU with autotools, so each slice
+        # builds natively: x86_64 under Rosetta. Unit tests are skipped.
+        (cd "$dir" && CMAKE_EXTRA_ARGS="-DBUILD_UNIT_TESTS=OFF" arch "-$arch" /bin/bash -e ./build.sh \
+            >"$WORK/build-$arch.log" 2>&1) || { tail -40 "$WORK/build-$arch.log" >&2; return 1; }
+        # Drop the debug info (well over 100 MB).
+        strip -x "$dir/.build-release/$FILE"
+        # The license texts of everything linked in statically: the libraries the module vendors, and
+        # gRPC with its bundled dependencies, which the build fetches. THIRD_PARTY_NOTICES only covers the
+        # former. upb is protobuf's code, under its license. Same sources for both slices, so writing it
+        # each time is fine.
+        local deps="$dir/.build-release/.deps" component f found
+        for component in "$dir"/third_party/{hdrhistogram_c,hnswlib,simsimd,snowball,icu} \
+            "$deps"/{highwayhash,googletest,grpc} "$deps"/grpc/third_party/{abseil-cpp,address_sorting,boringssl-with-bazel,cares/cares,protobuf,re2,utf8_range,xxhash,zlib,envoy-api,googleapis,xds,protoc-gen-validate,opencensus-proto}; do
+            found=
+            for f in "$component"/{LICENSE,LICENSE.md,LICENSE.txt,COPYING,COPYING.txt,NOTICE,NOTICE.txt}; do
+                [ -f "$f" ] || continue
+                found=1
+                printf '\n==== %s ====\n\n' "${f#"$dir"/}"; cat "$f"
+            done
+            [ -n "$found" ] || echo "warning: no license file in ${component#"$dir"/}" >&2
+        done > "$SRC/THIRD_PARTY_LICENSES"
+        echo "$dir/.build-release/$FILE" ;;
     esac
 }
 
@@ -104,17 +151,30 @@ for variant in "${VARIANTS[@]}"; do
 
     STAGE="$WORK/stage-$ID"
     rm -rf "$STAGE" && mkdir -p "$STAGE"
-    slices=()
-    for arch in $ARCHS; do slices+=("$(build "$arch" "$OPTION")"); done
-    lipo -create "${slices[@]}" -output "$STAGE/$FILE"
-    codesign --force --sign - "$STAGE/$FILE"
-    for license in $LICENSES; do cp "$SRC/$license" "$STAGE/"; done
+    if [ -n "${REUSE_PUBLISHED:-}" ]; then
+        info=$(python3 - "$REGISTRY/registry.json" "$ID" <<'EOF'
+import json, sys
+m = next(m for m in json.load(open(sys.argv[1])).get("modules", []) if m["id"] == sys.argv[2])
+print(m["url"], m["sha256"], m.get("sourceCommit", ""))
+EOF
+        ) || { echo "$ID isn't in the registry; nothing to reuse"; exit 1; }
+        read -r url sha COMMIT <<<"$info"
+        curl -fsSL -o "$OUT/$ID.tar.gz" "$url"
+        echo "$sha  $OUT/$ID.tar.gz" | shasum -a 256 -c - >/dev/null
+        tar xzf "$OUT/$ID.tar.gz" -C "$STAGE"
+    else
+        slices=()
+        for arch in $ARCHS; do slices+=("$(build "$arch" "$OPTION")"); done
+        lipo -create "${slices[@]}" -output "$STAGE/$FILE"
+        codesign --force --sign - "$STAGE/$FILE"
+        for license in $LICENSES; do cp "$SRC/$license" "$STAGE/"; done
+    fi
 
     for line in "${SELECTED[@]}"; do
         "$REGISTRY/scripts/check-module.sh" "$NAME" "$STAGE/$FILE" "$(valkey_bin "$line")"
     done
 
-    COPYFILE_DISABLE=1 tar -czf "$OUT/$ID.tar.gz" -C "$STAGE" "$FILE" $LICENSES
+    [ -n "${REUSE_PUBLISHED:-}" ] || COPYFILE_DISABLE=1 tar -czf "$OUT/$ID.tar.gz" -C "$STAGE" "$FILE" $LICENSES
     python3 - "$OUT/$ID.json" <<EOF
 import json, sys
 json.dump({"id": "$ID", "name": "$NAME", "version": "$VERSION", "title": "$TITLE", "summary": "$SUMMARY",

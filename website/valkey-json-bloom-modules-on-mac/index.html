@@ -124,9 +124,12 @@
     <li><strong>Bloom</strong>: scalable Bloom filters for fast membership checks (<code>BF.ADD</code>,
       <code>BF.EXISTS</code>, …). "Have I seen this before?" in a small, fixed amount of memory, with a
       small chance of false positives and none of false negatives.</li>
+    <li><strong>Search</strong>: vector and full-text search over hashes and JSON (<code>FT.CREATE</code>,
+      <code>FT.SEARCH</code>, …). Valkey 9.1 and 9.2 only. On macOS its index memory isn't counted in Valkey's
+      <code>used_memory</code> or <code>maxmemory</code>.</li>
   </ul>
-  <p>Each module build is tested against the Valkey versions it's listed for. Right now JSON works with
-    Valkey 8.0 through 9.2 and Bloom with 8.0 through 9.1; neither is offered for 7.2. The
+  <p>Each module build is tested against the Valkey versions it's listed for. Right now JSON and Bloom
+    both work with Valkey 8.0 through 9.2; neither is offered for 7.2. The
     <a href="/#modules">modules table</a> on the home page is always current, or ask the app:</p>
   <pre>valkey-app modules --valkey 9.1.4</pre>
 
